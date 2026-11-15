@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HarvestCompass
 
-## Getting Started
+**Plan Smarter. Harvest Better.** A hackathon MVP for Midwest farm operations, from field planning to harvest preparation and season reporting.
 
-First, run the development server:
+## What works now
+
+- Responsive dashboard with acreage, field status, tasks, expenses, crop progress, and recent activity.
+- Pages for Farm Map, Farm Operations, Action Plan, AI Assistant, and Reports & History.
+- Add and delete fields, tasks, expenses, and equipment. Complete or reopen tasks and update equipment status.
+- Dashboard totals and expense chart update from edited records.
+- Records persist in the current browser through local storage. The initial South Dakota farm records are **fictional demo data**.
+
+The AI assistant page previews the intended workflow. No AI model, live weather feed, maps, or hosted database is connected yet. Changes are not shared across browsers or users. Farmers will approve important AI-suggested plan changes in a later phase.
+
+## Run locally
+
+Requires Node.js and npm.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The root route redirects to `/dashboard`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project structure
 
-## Learn More
+- `app/`: Next.js App Router pages and global styles.
+- `components/`: shared shell, chart, farm data provider, and record forms.
+- `lib/`: TypeScript farm types and demo seed data.
+- `supabase/migrations/`: proposed hosted schema and row-level security policies, not yet applied.
+- `PHASE2.md`: current persistence status and remaining connection work.
 
-To learn more about Next.js, take a look at the following resources:
+## Planned hosted setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+A Supabase project can replace browser storage using the schema in `supabase/migrations/202611140001_initial.sql`. Copy `.env.example` to `.env.local` and add the project URL and **publishable** key when hosted integration is implemented. Do not put secret or service-role keys in client environment variables or commit `.env.local`.

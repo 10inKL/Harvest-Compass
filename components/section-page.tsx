@@ -1,0 +1,6 @@
+import Link from "next/link";
+import { ArrowRight, type LucideIcon } from "lucide-react";
+import { Shell } from "./shell";
+import { FarmRecords } from "./farm-records";
+export interface SectionItem { title: string; description: string; meta: string; icon: LucideIcon; }
+export function SectionPage({ eyebrow, title, description, icon: Icon, items, note, records }: { eyebrow: string; title: string; description: string; icon: LucideIcon; items: SectionItem[]; note: string; records?: "fields" | "tasks" | "expenses" | "equipment"; }) { return <Shell><div className="demo-label">DEMO DATA · PRAIRIE CREEK FARM</div><section className="section-hero"><div className="section-icon"><Icon size={30}/></div><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div></section><div className="section-grid">{items.map(({title,description,meta,icon:ItemIcon}) => <article className="section-card" key={title}><span className="section-card-icon"><ItemIcon size={22}/></span><span className="section-meta">{meta}</span><h3>{title}</h3><p>{description}</p></article>)}</div>{records && <FarmRecords kind={records}/>}<div className="section-note"><span>{note}</span><Link href="/dashboard">Back to overview <ArrowRight size={15}/></Link></div></Shell>; }
