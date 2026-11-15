@@ -53,3 +53,13 @@ Run `supabase/migrations/202611150004_csb_boundaries.sql`, then bulk-load the ex
 Location autocomplete uses Geoapify's free tier with `GEOAPIFY_API_KEY` kept on the server. It accepts US cities, addresses and ZIP codes; coordinates work without a key. Saved field names are suggested from the current farm. No location searches are restricted to South Dakota, but estimated boundaries are shown only where USDA data has actually been imported. The public Nominatim endpoint is not used for autocomplete because its usage policy forbids it.
 
 For a direct Postgres import, install `psycopg[binary]`, set a server-side `SUPABASE_DB_URL` temporarily, and run `scripts/import_csb_supabase.py`. Do not commit that connection string.
+
+For the local hackathon demo, build a spatially indexed SQLite file from the South Dakota extract:
+
+```bash
+/tmp/harvestcompass-csb-env/bin/pip install ijson
+/tmp/harvestcompass-csb-env/bin/python scripts/build_csb_index.py \
+  data/csb/south-dakota-csb.geojson data/csb/south-dakota-csb.sqlite
+```
+
+The Next.js map API uses this local index when present, returning at most 500 features per visible map request. The indexed file is about 420 MB and is excluded from Git. On a hosted deployment without this file, apply the PostGIS migration and import the state data in batches within the database's storage allowance. The USDA source archive, extracted GeoJSON and local index are not shipped with the repository.

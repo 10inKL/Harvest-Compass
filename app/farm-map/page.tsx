@@ -49,12 +49,10 @@ export default function FarmMap() {
       if (!bbox) return;
       const [minLng, minLat, maxLng, maxLat] = bbox;
       if (maxLat < 42.47 || minLat > 45.95 || maxLng < -104.06 || minLng > -96.43) { setMapCandidates([]); setDataStatus("Agricultural field boundary data is currently available for South Dakota only."); return; }
-      if (!supabase) { const inBrookings = minLng < -96.78 && maxLng > -96.78 && minLat < 44.28 && maxLat > 44.28; setMapCandidates(inBrookings ? candidateFields : []); setDataStatus(inBrookings ? "Demo suggestions loaded" : "Demo boundaries are available near Brookings only."); return; }
       if (maxLng - minLng > 1 || maxLat - minLat > 1) { setMapCandidates([]); setDataStatus("Zoom in to load estimated USDA fields."); return; }
-      const session = await supabase.auth.getSession(); const token = session.data.session?.access_token;
-      if (!token) return;
-      const response = await fetch(`/api/map/fields?minLng=${minLng}&minLat=${minLat}&maxLng=${maxLng}&maxLat=${maxLat}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!response.ok) { if (active) setDataStatus("USDA boundary import is not available yet."); return; }
+      const session = await supabase?.auth.getSession(); const token = session?.data.session?.access_token;
+      const response = await fetch(`/api/map/fields?minLng=${minLng}&minLat=${minLat}&maxLng=${maxLng}&maxLat=${maxLat}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!response.ok) { if (active) { setMapCandidates([]); setDataStatus("USDA boundary data is not available on this server yet."); } return; }
       const collection = await response.json() as { features?: { id: string; geometry?: { type: string; coordinates?: number[][][][] | number[][][] }; properties?: Record<string, unknown> }[] };
       const fields = (collection.features ?? []).map((feature) => {
         const polygon = feature.geometry?.coordinates?.[0]; const ring = feature.geometry?.type === "MultiPolygon" ? (polygon as number[][][] | undefined)?.[0] ?? [] : polygon as number[][] | undefined ?? []; const properties = feature.properties ?? {};
