@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase-client";
 import { useFarm } from "./farm-provider";
 import type { ReportAdvice } from "@/lib/season-report-pdf";
 
-export function DownloadFarmReport(){
+export function DownloadFarmReport({compact=false}:{compact?:boolean}){
   const {data,hosted,ready,busy}=useFarm();
   const [exporting,setExporting]=useState(false);
   const [error,setError]=useState("");
@@ -19,5 +19,5 @@ export function DownloadFarmReport(){
       const {downloadSeasonReport}=await import("@/lib/season-report-pdf");downloadSeasonReport(snapshot,insights);
     }catch{setError("The PDF could not be generated. Please try again.");}finally{setExporting(false);}
   }
-  return <div><button type="button" className="primary-button" style={{minHeight:48,padding:"12px 20px",fontSize:14}} onClick={download} disabled={exporting||busy||!ready} title="Download your farm records with an AI assessment of current data">{exporting?<LoaderCircle size={19} className="spin"/>:<Download size={19}/>} {exporting?"Preparing report…":"Download farm report (PDF)"}</button>{error&&<p className="record-error" role="alert">{error}</p>}</div>;
+  return <div><button type="button" className="primary-button" style={{minHeight:48,padding:"12px 20px",fontSize:14}} onClick={download} disabled={exporting||busy||!ready} title="Download your farm records with an AI assessment of current data">{exporting?<LoaderCircle size={19} className="spin"/>:<Download size={19}/>} {exporting?"Preparing report…":compact?"Farm report (PDF)":"Download farm report (PDF)"}</button>{error&&<p className="record-error" role="alert">{error}</p>}</div>;
 }
