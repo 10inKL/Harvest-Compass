@@ -13,12 +13,14 @@ from pathlib import Path
 
 import ijson
 import psycopg
+from dotenv import load_dotenv
 
 
 def main() -> None:
+    load_dotenv(".env.local")
     if not os.environ.get("SUPABASE_DB_URL"):
         raise SystemExit("Set SUPABASE_DB_URL to the Supabase Postgres connection string")
-    source = Path(sys.argv[1] if len(sys.argv) > 1 else "data/csb/brookings-csb.geojson")
+    source = Path(sys.argv[1] if len(sys.argv) > 1 else "data/csb/south-dakota-selected-counties.geojson")
     import json
     sql = """
       insert into public.csb_boundaries (csbid, source_release, state_fips, county_fips, acres, geom, crop_2018, crop_2019, crop_2020, crop_2021, crop_2022, crop_2023, crop_2024, crop_2025)
@@ -30,6 +32,17 @@ def main() -> None:
     count = 0
     with psycopg.connect(os.environ["SUPABASE_DB_URL"]) as connection, source.open("rb") as data:
         with connection.cursor() as cursor:
+            cursor.execute("select pg_database_size(current_database())")
+            used_bytes = cursor.fetchone()[0]
+            free_limit = 500 * 1024 * 1024
+            reserve = 150 * 1024 * 1024
+            conservative_import = 120 * 1024 * 1024
+            print(f"Current database: {used_bytes / 1048576:.1f} MiB; estimated county import: up to 120 MiB; reserved for farm data: 150 MiB", flush=True)
+            if used_bytes + conservative_import + reserve > free_limit:
+                raise SystemExit("Import stopped: estimated storage would leave less than 150 MiB for farmer records within the Free allowance")
+            migration = Path("supabase/migrations/202611150004_csb_boundaries.sql").read_text()
+            cursor.execute(migration)
+            connection.commit()
             batch = []
             for feature in ijson.items(data, "features.item", use_float=True):
                 props = feature.get("properties", {})

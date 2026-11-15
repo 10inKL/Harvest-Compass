@@ -63,3 +63,14 @@ For the local hackathon demo, build a spatially indexed SQLite file from the Sou
 ```
 
 The Next.js map API uses this local index when present, returning at most 500 features per visible map request. The indexed file is about 420 MB and is excluded from Git. On a hosted deployment without this file, apply the PostGIS migration and import the state data in batches within the database's storage allowance. The USDA source archive, extracted GeoJSON and local index are not shipped with the repository.
+
+For the hosted Free-tier pilot, extract the nine selected counties without sampling:
+
+```bash
+/tmp/harvestcompass-csb-env/bin/python scripts/prepare_csb_counties.py \
+  data/csb/south-dakota-csb.geojson data/csb/south-dakota-selected-counties.geojson
+/tmp/harvestcompass-csb-env/bin/python scripts/build_csb_index.py \
+  data/csb/south-dakota-selected-counties.geojson data/csb/south-dakota-selected-counties.sqlite
+```
+
+The subset contains 79,829 USDA polygons (114.6 MiB GeoJSON, 47 MB indexed SQLite). Estimated PostgreSQL table and indexes are 59–106 MiB. Add `SUPABASE_DB_URL` to `.env.local` only for the server-side import, then run `scripts/import_csb_supabase.py`. It checks actual database size, applies the PostGIS migration, imports in 500-record batches, and stops before leaving less than 150 MiB for farm records within the 500 MiB Free allowance. The local map prefers the nine-county index; the original 420 MB statewide index remains untouched as source/fallback.

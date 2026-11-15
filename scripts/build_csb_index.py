@@ -28,7 +28,7 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(args.output)
     db.executescript("""
-      create table if not exists fields (id integer primary key, csbid text unique, acres real, crop2025 integer, geometry blob);
+      create table if not exists fields (id integer primary key, csbid text unique, county_fips text, acres real, crop2025 integer, geometry blob);
       create virtual table if not exists bounds using rtree(id, min_lng, max_lng, min_lat, max_lat);
     """)
     count = 0
@@ -41,7 +41,7 @@ def main():
             lngs = [float(p[0]) for p in coords]
             lats = [float(p[1]) for p in coords]
             props = field["properties"]
-            cursor = db.execute("insert or ignore into fields(csbid,acres,crop2025,geometry) values(?,?,?,?)", (props["CSBID"], props.get("CSBACRES"), props.get("CDL2025"), zlib.compress(json.dumps(geom, separators=(",", ":")).encode(), 6)))
+            cursor = db.execute("insert or ignore into fields(csbid,county_fips,acres,crop2025,geometry) values(?,?,?,?,?)", (props["CSBID"], props.get("CNTYFIPS"), props.get("CSBACRES"), props.get("CDL2025"), zlib.compress(json.dumps(geom, separators=(",", ":")).encode(), 6)))
             if cursor.rowcount:
                 db.execute("insert into bounds values(?,?,?,?,?)", (cursor.lastrowid, min(lngs), max(lngs), min(lats), max(lats)))
                 count += 1

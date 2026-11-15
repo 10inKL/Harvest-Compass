@@ -48,7 +48,7 @@ export default function FarmMap() {
     async function loadUsdaFields() {
       if (!bbox) return;
       const [minLng, minLat, maxLng, maxLat] = bbox;
-      if (maxLat < 42.47 || minLat > 45.95 || maxLng < -104.06 || minLng > -96.43) { setMapCandidates([]); setDataStatus("Agricultural field boundary data is currently available for South Dakota only."); return; }
+      if (maxLat < 42.47 || minLat > 45.95 || maxLng < -104.06 || minLng > -96.43) { setMapCandidates([]); setDataStatus("Agricultural field data is not yet available for this area."); return; }
       if (maxLng - minLng > 1 || maxLat - minLat > 1) { setMapCandidates([]); setDataStatus("Zoom in to load estimated USDA fields."); return; }
       const session = await supabase?.auth.getSession(); const token = session?.data.session?.access_token;
       const response = await fetch(`/api/map/fields?minLng=${minLng}&minLat=${minLat}&maxLng=${maxLng}&maxLat=${maxLat}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
@@ -58,7 +58,7 @@ export default function FarmMap() {
         const polygon = feature.geometry?.coordinates?.[0]; const ring = feature.geometry?.type === "MultiPolygon" ? (polygon as number[][][] | undefined)?.[0] ?? [] : polygon as number[][] | undefined ?? []; const properties = feature.properties ?? {};
         return { id: feature.id, name: `USDA estimated field ${feature.id}`, crop: cropFromCdl(properties.crop2025), acres: Number(properties.acres ?? 0), source: "USDA NASS Crop Sequence Boundaries 2018-2025 (estimated)", coordinates: ring.map(([lng, lat]) => [lat, lng] as [number, number]) };
       }).filter((field) => field.coordinates.length >= 4 && field.acres > 0);
-      if (active) { setMapCandidates(fields); setDataStatus(fields.length ? `${fields.length.toLocaleString()} USDA estimated boundaries loaded` : "No USDA boundaries in this map view yet."); }
+      if (active) { setMapCandidates(fields); setDataStatus(fields.length ? `${fields.length.toLocaleString()} USDA estimated boundaries loaded` : "Agricultural field data is not yet available for this area."); }
     }
     void loadUsdaFields(); return () => { active = false; };
   }, [bbox]);

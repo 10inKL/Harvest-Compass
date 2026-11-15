@@ -36,6 +36,7 @@ yarn-error.log*
 
 # USDA CSB archives and extracted GIS data (download locally; never commit)
 /data/csb/
+__pycache__/
 
 # vercel
 .vercel
