@@ -54,7 +54,7 @@ Create a free account at https://mymarketnews.ams.usda.gov/ and find your key in
 
 The authenticated `/api/market-prices` server route fetches public publication metadata first, then requests only that report date using USDA Basic authentication. Credentials never reach the browser. Normalized prices are cached in memory for one hour, concurrent requests are coalesced, and errors have a one-minute backoff. Units, price ranges, dates, current delivery and ambiguous price series are validated; unsupported results are not displayed. The cache is per server instance. No raw provider errors or credentials are logged or returned.
 
-Checks: `node --experimental-strip-types --test tests/grain-market.test.mjs`. Provider responses are mocked. A live authenticated USDA response has not been tested during development; enable the connection and verify the displayed values against the linked official report before the demo. USDA docs: https://mymarketnews.ams.usda.gov/mymarketnews-api/authentication and https://mymarketnews.ams.usda.gov/mymarketnews-api/filtering.
+Checks: `node --experimental-strip-types --test tests/grain-market.test.mjs`. Tests mock provider responses and cover the verified USDA grain schema: `trade_loc`, spaced price keys, `$ Per Bushel` units and the `current` flag. An authenticated live report was verified during user-authorized troubleshooting; subsequent automated tests never use real credentials. USDA docs: https://mymarketnews.ams.usda.gov/mymarketnews-api/authentication and https://mymarketnews.ams.usda.gov/mymarketnews-api/filtering.
 
 ### Voice questions
 

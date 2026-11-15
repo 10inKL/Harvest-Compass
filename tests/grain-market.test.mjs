@@ -11,6 +11,12 @@ test("USDA section results retain cash ranges, precise values, regions and sourc
   const result=normalizeGrainMarket([section([row(),row({commodity:"Soybeans",price_min:"10.9875",price_max:"11.4875",price_avg:"11.1513"})]),{reportSection:"Futures Settlements",results:[row({price_avg:"4.00"})]}],now);
   assert.equal(result.bids.length,2);assert.equal(result.bids[1].average,11.1513);assert.equal(result.reportDate,"2026-11-13");assert.equal(result.retrievedAt,now.toISOString());
 });
+test("the verified USDA grain schema uses trade_loc, spaced price keys, dollar-per-bushel units and current Yes",()=>{
+  const official={commodity:"Corn",trade_loc:"East Central",market_location_name:"Grain - South Dakota",report_date:"11/13/2026",price_unit:"$ Per Bushel","sale Type":"Bid","price Min":3.5,"price Max":3.95,avg_price:3.74,current:"Yes",conventional:"Conventional",grade:"US #2"};
+  const result=normalizeGrainMarket(section([official]),now);
+  assert.equal(result.bids[0].region,"East Central");assert.equal(result.bids[0].low,3.5);assert.equal(result.bids[0].delivery,"Current");
+  for(const overrides of [{current:"No"},{conventional:"Organic"},{price_unit:"¢ Per Bushel"},{"sale Type":"Trade"}])assert.throws(()=>normalizeGrainMarket(section([{...official,...overrides}]),now));
+});
 test("unknown units, forward deliveries, organic quotes, future dates and malformed prices are excluded",()=>{
   for(const overrides of [{price_unit:"cents/bu"},{price_unit:""},{delivery_period:"Dec"},{organic:"Yes"},{report_date:"11/16/2026"},{report_date:"02/30/2026"},{price_min:"-3.5",price_max:"N/A",price_avg:null},{price_min:"4.00",price_max:"3.00"},{price_avg:"5.00"},{sale_type:"Trade"},{region_name:"Iowa"}]){
     assert.throws(()=>normalizeGrainMarket(section([row(overrides)]),now));

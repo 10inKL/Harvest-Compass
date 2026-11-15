@@ -34,21 +34,24 @@ export function normalizeGrainMarket(payload:unknown,now=new Date()):GrainMarket
   const bids:GrainBid[]=[];
   const today=now.toISOString().slice(0,10);
   for(const raw of rows(payload)){
-    const row=Object.fromEntries(Object.entries(raw).map(([key,value])=>[key.toLowerCase(),value]));
+    // The grain feed mixes snake_case with labels such as "price Min" and "sale Type".
+    const row=Object.fromEntries(Object.entries(raw).map(([key,value])=>[key.toLowerCase().replace(/\s+/g,"_"),value]));
     const commodity=field(row,"commodity","commodity_name");
     const crop=/^(corn|soybeans)$/i.test(commodity)?(/^corn$/i.test(commodity)?"Corn":"Soybeans"):null;
     if(!crop)continue;
-    const regionText=field(row,"region_name","region","market_location_name","location","location_name");
+    const regionText=field(row,"trade_loc","region_name","region","market_location_name","location","location_name");
     const region=GRAIN_REGIONS.find(item=>item.toLowerCase()===regionText.toLowerCase());
     const reportDate=date(field(row,"report_date","report_begin_date"));
     const unit=field(row,"price_unit","price_units","unit_of_sale","unit").toLowerCase().replace(/\s/g,"");
-    if(!region||!reportDate||reportDate>today||!["$/bu","$/bushel","usd/bu","usd/bushel","dollars/bushel"].includes(unit))continue;
+    if(!region||!reportDate||reportDate>today||!["$/bu","$/bushel","$perbushel","usd/bu","usd/bushel","dollars/bushel"].includes(unit))continue;
     const sale=field(row,"sale_type","bid_type","transaction_type");
     if(sale&&!/^bid$/i.test(sale))continue;
-    const delivery=field(row,"delivery_period","delivery","delivery_description");
+    const current=field(row,"current").toLowerCase();
+    if(current&&current!=="yes")continue;
+    const delivery=field(row,"delivery_period","delivery","delivery_description")||(current==="yes"?"Current":"");
     // Keep forward contracts and organic premiums out of the current conventional cash comparison.
     if(!/^current(?: delivery)?$/i.test(delivery))continue;
-    const organic=field(row,"organic","production_practice");
+    const organic=field(row,"organic","production_practice","conventional");
     if(/^(yes|organic)$/i.test(organic))continue;
     const low=number(field(row,"price_min","price_low","low_price"));
     const high=number(field(row,"price_max","price_high","high_price"));
