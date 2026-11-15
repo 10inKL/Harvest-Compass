@@ -1,4 +1,4 @@
-export interface Field { id: string; name: string; crop: "Corn" | "Soybeans"; acres: number; planted: string; status: string; progress: number; }
+export interface Field { id: string; name: string; crop: "Corn" | "Soybeans"; acres: number; planted: string; status: string; progress: number; boundaryGeoJson?: { type: "Polygon"; coordinates: number[][][] }; boundarySource?: string; boundaryConfirmed?: boolean; }
 export interface Farm { name: string; location: string; season: string; totalAcres: number; estimatedExpenses: number; fields: Field[]; }
 export const farm: Farm = { name: "Prairie Creek Farm", location: "Brookings County, South Dakota", season: "2026 Season", totalAcres: 1280, estimatedExpenses: 428500, fields: [
   { id: "north", name: "North Quarter", crop: "Corn", acres: 320, planted: "May 8", status: "On track", progress: 78 },

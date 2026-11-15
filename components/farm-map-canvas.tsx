@@ -1,0 +1,38 @@
+"use client";
+import { useEffect, useRef } from "react";
+import type { Map as LeafletMap, LayerGroup } from "leaflet";
+import type { CandidateField } from "@/lib/map-data";
+
+export function FarmMapCanvas({ candidates, selectedId, onSelect }: { candidates: CandidateField[]; selectedId: string | null; onSelect: (candidate: CandidateField) => void }) {
+  const node = useRef<HTMLDivElement>(null);
+  const map = useRef<LeafletMap | null>(null);
+  const layers = useRef<LayerGroup | null>(null);
+  function renderPolygons(L: typeof import("leaflet")) {
+    if (!layers.current) return;
+    layers.current.clearLayers();
+    for (const candidate of candidates) {
+      const polygon = L.polygon(candidate.coordinates.map(([lat, lng]) => [lat, lng] as [number, number]), { color: selectedId === candidate.id ? "#f7d37b" : "#ffffff", weight: selectedId === candidate.id ? 4 : 2, fillColor: candidate.crop === "Corn" ? "#d8b85b" : "#78a87b", fillOpacity: selectedId === candidate.id ? .58 : .32 });
+      polygon.bindTooltip(`${candidate.name} · ${candidate.acres} ac`, { sticky: true });
+      polygon.on("click", () => onSelect(candidate));
+      polygon.addTo(layers.current);
+    }
+  }
+  useEffect(() => {
+    let active = true;
+    void import("leaflet").then(L => {
+      if (!active || !node.current || map.current) return;
+      const instance = L.map(node.current).setView([44.28, -96.78], 13);
+      const imagery = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { attribution: "Imagery © Esri" });
+      const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors" });
+      imagery.addTo(instance);
+      L.control.layers({ "Satellite imagery": imagery, Streets: streets }, undefined, { position: "topright" }).addTo(instance);
+      map.current = instance;
+      layers.current = L.layerGroup().addTo(instance);
+      renderPolygons(L);
+      setTimeout(() => instance.invalidateSize(), 100);
+    });
+    return () => { active = false; map.current?.remove(); map.current = null; layers.current = null; };
+  }, []);
+  useEffect(() => { if (map.current) void import("leaflet").then(L => renderPolygons(L)); }, [candidates, selectedId]);
+  return <div ref={node} className="farm-map-canvas" aria-label="Interactive suggested field boundary map"/>;
+}
