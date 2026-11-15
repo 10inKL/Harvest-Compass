@@ -9,6 +9,13 @@ import { candidateFields, type CandidateField } from "@/lib/map-data";
 
 const FarmMapCanvas = dynamic(() => import("@/components/farm-map-canvas").then((m) => m.FarmMapCanvas), { ssr: false, loading: () => <div className="map-empty">Loading satellite map…</div> });
 function toGeoJson(c: CandidateField) { return { type: "Polygon" as const, coordinates: [[...c.coordinates.map(([lat, lng]) => [lng, lat])]] }; }
+function estimateAcres(points: [number, number][]) {
+  const lat = points.reduce((sum, point) => sum + point[0], 0) / points.length;
+  const scaleX = 111320 * Math.cos((lat * Math.PI) / 180); const scaleY = 110540;
+  let area = 0;
+  for (let i = 0; i < points.length - 1; i += 1) { const [y1, x1] = points[i]; const [y2, x2] = points[i + 1]; area += (x1 * scaleX) * (y2 * scaleY) - (x2 * scaleX) * (y1 * scaleY); }
+  return Math.max(1, Math.round(Math.abs(area) / 2 / 4046.86));
+}
 
 export default function FarmMap() {
   const { data, saveRecord, busy } = useFarm();
@@ -19,7 +26,7 @@ export default function FarmMap() {
   function selectCandidate(c: CandidateField) { setSelected(c); setFieldName(c.name.replace(" candidate", "")); setCrop(c.crop); setSaved(false); }
   function startDrawing() { setSelected(null); setSaved(false); setDrawing(true); setFieldName("New field"); }
   function finishDrawing() { window.dispatchEvent(new Event("harvestcompass:finish-drawing")); }
-  function acceptDrawnBoundary(coordinates: [number, number][]) { setDrawing(false); setSelected({ id: "manual-boundary", name: "New field", crop, acres: Math.max(1, Math.round(coordinates.length * 12)), source: "Farmer-drawn boundary", coordinates }); }
+  function acceptDrawnBoundary(coordinates: [number, number][]) { setDrawing(false); setSelected({ id: "manual-boundary", name: "New field", crop, acres: estimateAcres(coordinates), source: "Farmer-drawn boundary", coordinates }); }
   async function confirmBoundary() {
     if (!selected || !fieldName.trim()) return;
     const existing = data.fields.find((field) => field.name.toLowerCase() === fieldName.trim().toLowerCase());
