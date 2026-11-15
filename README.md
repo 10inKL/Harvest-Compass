@@ -19,6 +19,8 @@ Create `.env.local` in the project root for live integrations. Keep secrets serv
 ```env
 OPENAI_API_KEY=your-key
 OPENAI_MODEL=gpt-5-mini
+GROQ_API_KEY=your-groq-free-plan-key
+GROQ_TRANSCRIPTION_MODEL=whisper-large-v3-turbo
 GEOAPIFY_API_KEY=your-free-tier-key
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
@@ -43,6 +45,16 @@ The app works in clearly labeled demo mode when Supabase is not configured. Neve
 - `/settings/ai` — server-side API configuration status and test connection controls.
 
 Run `npm run lint` and `npm run build` before a demo. Hosted databases need migrations through `supabase/migrations/202611150006_grain_sales.sql`; the current hosted project has the grain-sales migration applied.
+
+### Voice questions
+
+The assistant microphone uses Groq's speech-to-text API, then passes the reviewed text to the existing OpenAI chat. Set `GROQ_API_KEY` in `.env.local` and restart the development server. Keep the Groq account on its Free plan; account-wide quotas still apply. No new package, paid subscription, or database migration is required. Neither the OpenAI credential nor farm records/chat history are sent to Groq.
+
+Click the microphone, allow browser access, record up to 60 seconds, then choose **Stop & transcribe**. Review or edit the transcript, click **Add to message**, and click **Send**. Cancel discards the recording or transcript; it never submits a chat. Audio stays in memory and is not saved by HarvestCompass. Chrome, Edge, and Safari use supported recording formats where available; microphone access requires HTTPS or localhost. Plain HTTP on another device's LAN address does not enable microphone recording.
+
+Typed chat continues to work when voice is unavailable. Permission failures, unsupported audio, silence, timeouts, and quota errors have explicit messages. The server caps audio at 4 MiB and adds per-process request/concurrency throttling; this is not an account-wide or multi-instance quota guarantee. For a scaled deployment, move rate accounting into shared infrastructure. No paid transcription fallback is used.
+
+Voice checks: `node --experimental-strip-types --test tests/voice-transcription.test.mjs`. These tests mock provider requests and never use real credentials. Live microphone/provider testing is a separate user-triggered step.
 
 ### Authentication and location services
 
