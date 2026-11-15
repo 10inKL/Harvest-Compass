@@ -51,7 +51,6 @@ function FarmSettingsContent() {
         <div className="form-actions"><button className="primary-button" type="submit" disabled={busy}>{busy ? "Creating…" : "Add farm"}</button></div>
       </form>
     </section>}
-    <div className="profile-links"><Link href="/farm-map"><MapPinned size={17}/> Select fields <ArrowRight size={15}/></Link></div>
-    <details className="records-panel"><summary>Advanced setup</summary><p>For the person managing this app’s assistant connection and forecast integration.</p><Link className="text-link" href="/settings/ai">Connection and forecast setup <ArrowRight size={15}/></Link></details>
+    <div className="profile-links"><Link href="/farm-map"><MapPinned size={17}/> Select fields <ArrowRight size={15}/></Link><Link href="/settings/ai"><Settings2 size={17}/> Assistant & weather settings <ArrowRight size={15}/></Link></div>
   </Shell>;
 }

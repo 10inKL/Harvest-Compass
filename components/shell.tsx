@@ -16,7 +16,7 @@ const nav = [
 ];
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname(); const {data,hosted,harvestAvailable,user,signOut}=useFarm();
-  const title = nav.find((item) => item.href === path)?.label ?? "Overview";
+  const title = nav.find((item) => item.href === path)?.label ?? (path==="/settings/ai"?"Assistant & Weather Settings":"Overview");
   const avatar = user?.email?.split("@")[0]?.slice(0,2).toUpperCase() || "HC";
   return <div className="app-shell">
     <aside className="sidebar">

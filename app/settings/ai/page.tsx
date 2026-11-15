@@ -3,39 +3,53 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, CloudSun, ExternalLink, KeyRound, LoaderCircle, ShieldCheck, Sparkles } from "lucide-react";
 import { Shell } from "@/components/shell";
+import { ForecastLocationPicker } from "@/components/forecast-location-picker";
 import { supabase } from "@/lib/supabase-client";
 import { useFarm } from "@/components/farm-provider";
+import styles from "./settings.module.css";
 
-type Config = { configured: boolean; model: string; connection: string; keyStorage: string; schemaReady: boolean; location: { latitude: number | null; longitude: number | null } | null; demo: boolean };
-export default function AISettings() {
-  const { hosted } = useFarm();
-  const [config, setConfig] = useState<Config | null>(null);
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [connection, setConnection] = useState("Not tested");
-  const [error, setError] = useState("");
-  const authFetch = useCallback(async (url: string, options?: RequestInit) => {
-    const token = hosted ? (await supabase?.auth.getSession())?.data.session?.access_token : null;
-    return fetch(url, { ...options, headers: { ...options?.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) }, cache: "no-store" });
-  }, [hosted]);
-  useEffect(() => { void (async () => { const response = await authFetch("/api/assistant/config"); const data = await response.json(); if (response.ok) { setConfig(data); setLatitude(data.location?.latitude?.toString() ?? ""); setLongitude(data.location?.longitude?.toString() ?? ""); } else setError(data.error ?? "Configuration unavailable."); })(); }, [authFetch]);
-  async function testConnection() {
-    setTesting(true); setNotice(""); setError("");
-    try { const response = await authFetch("/api/assistant/config", { method: "POST" }); const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Connection test failed."); setConnection("Connected"); setNotice(`Connected to OpenAI using ${data.model}.`); }
-    catch (e) { setConnection("Test failed"); setError(e instanceof Error ? e.message : "Connection test failed."); }
-    finally { setTesting(false); }
+type Config={configured:boolean;model:string;schemaReady:boolean;location:{latitude:number|null;longitude:number|null}|null};
+export default function AISettings(){const {farmId}=useFarm();return <AssistantSettings key={farmId??"local"}/>;}
+function AssistantSettings(){
+  const {hosted,data}=useFarm();
+  const [config,setConfig]=useState<Config|null>(null),[loading,setLoading]=useState(true),[testing,setTesting]=useState(false),[connection,setConnection]=useState("Not tested"),[error,setError]=useState(""),[savedLocation,setSavedLocation]=useState("");
+  const authFetch=useCallback(async(url:string,options?:RequestInit)=>{
+    const token=hosted?(await supabase?.auth.getSession())?.data.session?.access_token:null;
+    return fetch(url,{...options,headers:{...options?.headers,...(token?{Authorization:`Bearer ${token}`}:{})},cache:"no-store"});
+  },[hosted]);
+  useEffect(()=>{
+    const controller=new AbortController();
+    void(async()=>{
+      try{const response=await authFetch("/api/assistant/config",{signal:controller.signal});const result=await response.json();if(controller.signal.aborted)return;if(!response.ok)throw new Error(result.error||"Settings could not be loaded. Please try again.");setConfig(result);}
+      catch(error){if(!controller.signal.aborted)setError(error instanceof Error?error.message:"Settings could not be loaded.");}
+      finally{if(!controller.signal.aborted)setLoading(false);}
+    })();return()=>controller.abort();
+  },[authFetch]);
+  async function testConnection(){
+    setTesting(true);setError("");
+    try{const response=await authFetch("/api/assistant/config",{method:"POST"});const result=await response.json();if(!response.ok||!result.connected)throw new Error(result.error||"The assistant connection could not be verified.");setConnection("Connected");}
+    catch(error){setConnection("Check failed");setError(error instanceof Error?error.message:"Connection check failed.");}
+    finally{setTesting(false);}
   }
-  async function saveLocation(event: React.FormEvent) {
-    event.preventDefault(); setSaving(true); setNotice(""); setError("");
-    try { const response = await authFetch("/api/assistant/location", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ latitude: Number(latitude), longitude: Number(longitude) }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Could not save coordinates."); setNotice("Farm coordinates saved. Weather forecasts can now use this location."); }
-    catch (e) { setError(e instanceof Error ? e.message : "Could not save coordinates."); }
-    finally { setSaving(false); }
-  }
-  return <Shell><div className="settings-page"><div className="demo-label">SETTINGS · ASSISTANT</div><div className="settings-hero"><span><Sparkles size={22}/></span><div><h2>Assistant settings</h2><p>Check your assistant connection and choose the location used for farm forecasts.</p></div></div>
-    <div className="settings-grid"><section className="settings-card"><div className="settings-card-heading"><KeyRound size={20}/><div><h3>OpenAI connection</h3><p>Managed by your app administrator</p></div></div><div className="settings-status"><span className={config?.configured ? "status-dot on" : "status-dot"}/><strong>{config?.configured ? "Key configured" : "Key not configured"}</strong><span>Model: {config?.model ?? "Loading…"}</span></div><p className="settings-fine">Connection: {connection}</p><p className="settings-copy"><strong>Save key locally:</strong> open the project’s <code>.env.local</code> file in VS Code and add:</p><pre className="settings-code">OPENAI_API_KEY=your_key_here{"\n"}OPENAI_MODEL=gpt-5-mini</pre><p className="settings-copy">Save the file and restart <code>npm run dev</code>. <strong>Remove key:</strong> delete the <code>OPENAI_API_KEY</code> line and restart. For deployment, set these as server environment variables in your hosting provider.</p><div className="settings-note"><ShieldCheck size={18}/><span>In-app key saving is unavailable because this project has no encrypted secret store. No key is stored in the browser, Supabase, or GitHub.</span></div><button className="primary-button" onClick={testConnection} disabled={!hosted || !config?.configured || testing}>{testing ? <LoaderCircle size={16} className="spin"/> : <CheckCircle2 size={16}/>} Test connection</button><p className="settings-fine">This button makes a small live OpenAI request only when you click it.</p></section>
-    <section className="settings-card"><div className="settings-card-heading"><CloudSun size={20}/><div><h3>Farm forecast location</h3><p>Coordinates for NOAA National Weather Service</p></div></div><p className="settings-copy">Enter the coordinates of your farm or nearest representative field. We do not infer precise coordinates from your county name.</p><form onSubmit={saveLocation} className="coordinates-form"><label>Latitude<input type="number" step="any" min="24" max="50" required value={latitude} onChange={e => setLatitude(e.target.value)} placeholder="e.g. 44.3"/></label><label>Longitude<input type="number" step="any" min="-125" max="-66" required value={longitude} onChange={e => setLongitude(e.target.value)} placeholder="e.g. -96.8"/></label><button className="primary-button" disabled={!hosted || saving}>{saving ? <LoaderCircle size={16} className="spin"/> : null} Save coordinates</button></form>{!hosted && <p className="settings-fine">Connect Supabase to save farm coordinates.</p>}<p className="settings-copy">Forecasts come from <a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noreferrer">NOAA/NWS <ExternalLink size={12}/></a> and include their retrieval time. If the service is unavailable, the assistant says so.</p></section></div>
-    {config && !config.schemaReady && hosted && <p className="chat-config">Database setup pending: apply <code>supabase/migrations/202611150002_assistant.sql</code> in your Supabase SQL Editor before using chat or saving coordinates.</p>}{notice && <p className="settings-success" role="status">{notice}</p>}{error && <p className="chat-error" role="alert">{error}</p>}<Link className="settings-back" href="/ai-assistant">← Back to AI Assistant</Link></div></Shell>;
+  const hasLocation=config?.location?.latitude!=null&&config?.location?.longitude!=null;
+  return <Shell><div className="settings-page"><div className="demo-label">SETTINGS · ASSISTANT & WEATHER</div><div className="settings-hero"><span><CloudSun size={22}/></span><div><h2>Assistant & weather settings</h2><p>Choose where your farm forecast comes from and check your assistant’s availability.</p></div></div>
+    <div className="settings-grid">
+      <section className="settings-card"><div className="settings-card-heading"><CloudSun size={20}/><div><h3>Farm forecast location</h3><p>Choose a town or one of your mapped fields</p></div></div>
+        <p className="settings-copy">{savedLocation?"Your forecast location is now "+savedLocation+".":loading?"Loading your forecast settings…":hasLocation?"A forecast location is saved for this farm. Choose below to change it.":"Your dashboard can use a mapped field automatically. You can also choose a town or field below."}</p>
+        <ForecastLocationPicker fields={data.fields} authFetch={authFetch} disabled={!hosted} onSaved={label=>setSavedLocation(label)}/>
+        {savedLocation&&<p className="settings-success" role="status">Forecast location saved. Your dashboard and assistant will use this location.</p>}
+        <p className="settings-copy">Forecasts come from <a href="https://www.weather.gov/" target="_blank" rel="noreferrer">NOAA National Weather Service <ExternalLink size={12}/></a>. The dashboard shows forecast dates and source times.</p><Link className="text-link" href="/dashboard">View your farm forecast →</Link>
+      </section>
+      <section className="settings-card"><div className="settings-card-heading"><Sparkles size={20}/><div><h3>Your farm assistant</h3><p>Use your saved records to ask questions and compare plans</p></div></div>
+        <div className="settings-status" role="status"><span className={config?.configured?"status-dot on":"status-dot"}/><strong>{loading?"Checking configuration…":config?.configured?"Connection configured":"Setup needed"}</strong></div>
+        <p className="settings-copy">{config?.configured?"Your assistant connection is configured. You can ask questions from AI Assistant; plan changes still need your approval.":"The person managing HarvestCompass needs to finish the assistant connection. Your farm records and forecast settings remain available."}</p>
+        <Link href="/ai-assistant" className="text-link">Open AI Assistant →</Link>
+        <details className={styles.advanced}><summary><KeyRound size={15}/> Advanced connection setup</summary><p className="settings-copy">For the person managing this app. Farmers do not need to enter an API key.</p><p className="settings-fine">Provider: OpenAI · Model: {config?.model??"Unavailable"}<br/>Connection check: {connection}</p>
+          <p className="settings-copy">For local development, add these server settings to the project’s <code>.env.local</code> and restart the development server:</p><pre className="settings-code">OPENAI_API_KEY=your_key_here{"\n"}OPENAI_MODEL=gpt-5-mini</pre><p className="settings-copy">To remove a key, delete its environment variable and restart. Production uses server environment variables.</p><div className="settings-note"><ShieldCheck size={17}/><span>Keys stay on the server. This app does not save keys in the browser or offer an insecure key-saving form.</span></div>
+          <button type="button" className="primary-button" onClick={testConnection} disabled={!hosted||!config?.configured||testing}>{testing?<LoaderCircle size={16} className="spin"/>:<CheckCircle2 size={16}/>} Check assistant connection</button><p className="settings-fine">Runs a small live OpenAI request only when clicked.</p>
+          {config&&!config.schemaReady&&hosted&&<p className="settings-copy">Assistant database setup is incomplete. Apply <code>supabase/migrations/202611150002_assistant.sql</code> before using chat.</p>}
+        </details>
+      </section>
+    </div>{error&&<p className="chat-error" role="alert">{error}</p>}<Link className="settings-back" href="/settings/farm">← Back to Farm Settings</Link>
+  </div></Shell>;
 }
