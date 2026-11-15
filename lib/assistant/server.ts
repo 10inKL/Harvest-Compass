@@ -1,4 +1,5 @@
 import "server-only";
+import { equipmentDescription } from "@/lib/equipment-terms";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { initialFarmState } from "@/lib/farm-store";
 
@@ -60,7 +61,7 @@ export async function getFarmContext(session: AssistantSession): Promise<FarmCon
     source: f.demo_seeded ? "saved records including fictional demo seed" : "saved Supabase records",
     farm: { name: f.name, location: f.location, seasonYear: f.season_year, latitude: f.latitude === null ? null : Number(f.latitude), longitude: f.longitude === null ? null : Number(f.longitude) },
     fields: ((fields ?? []) as { id: string; name: string; crop: string; acres: number; planted_on: string | null; status: string; progress: number }[]).map(x => ({ id: x.id, name: x.name, crop: x.crop, acres: Number(x.acres), plantedOn: x.planted_on, status: x.status, progress: x.progress })),
-    equipment: (equipment ?? []) as FarmContext["equipment"],
+    equipment: ((equipment ?? []) as FarmContext["equipment"]).map(item => ({...item, note: equipmentDescription(item.note)})),
     tasks: ((tasks ?? []) as { title: string; detail: string; due_on: string | null; priority: string; done: boolean }[]).map(x => ({ title: x.title, detail: x.detail, dueOn: x.due_on, priority: x.priority, done: x.done })),
     expenses: ((expenses ?? []) as { category: string; amount: number; incurred_on: string; note: string }[]).map(x => ({ category: x.category, amount: Number(x.amount), incurredOn: x.incurred_on, note: x.note })),
     harvest: ((harvest ?? []) as { field_id: string; harvested_on: string; bushels: number; moisture_percent: number | null; storage_bin: string }[]).map(x => ({ fieldId: x.field_id, harvestedOn: x.harvested_on, bushels: Number(x.bushels), moisturePercent: x.moisture_percent === null ? null : Number(x.moisture_percent), storageBin: x.storage_bin })),
@@ -70,6 +71,7 @@ export async function getFarmContext(session: AssistantSession): Promise<FarmCon
 
 export function publicError(error: unknown) {
   const message = error instanceof Error ? error.message : "The assistant could not complete this request.";
+  if (message.startsWith("The assistant reached its response limit") || message.startsWith("The assistant stopped before producing")) return message;
   if (message.includes("session") || message.includes("Sign in") || message.includes("farm workspace")) return message;
   if (message.includes("ai_conversations") || message.includes("ai_messages") || message.includes("ai_proposals") || message.includes("latitude")) return "The assistant database migration has not been applied yet. See Settings → AI Configuration.";
   if (message.includes("Could not load farm records")) return message;

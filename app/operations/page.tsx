@@ -7,7 +7,8 @@ import { useFarm } from "@/components/farm-provider";
 
 export default function Operations() {
   const { data } = useFarm();
-  const planted = data.fields.filter(field => field.planted !== "Not set" && !!field.planted).length;
+  const today = new Date().toLocaleDateString("en-CA");
+  const planted = data.fields.filter(field => field.status !== "Planned" && field.planted !== "Not set" && !!field.planted && (!/^\d{4}-\d{2}-\d{2}$/.test(field.planted) || field.planted <= today)).length;
   const attention = data.fields.filter(field => field.status === "Needs attention").length;
   const service = data.equipment.filter(item => item.status === "Needs service").length;
   const ready = data.equipment.filter(item => item.status === "Ready").length;

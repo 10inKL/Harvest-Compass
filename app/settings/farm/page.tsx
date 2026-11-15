@@ -41,16 +41,17 @@ function FarmSettingsContent() {
         <div className="form-actions"><button className="primary-button" type="submit" disabled={busy}>{busy ? "Saving…" : "Save farm profile"}</button></div>
       </form>
       {saved && <p className="record-success" role="status">Farm profile saved.</p>}{error && <p className="record-error" role="alert">{error}</p>}
-      {data.demoSeeded && <p className="profile-note">This workspace began with fictional demo records. Create a blank farm below to start with your own records while keeping this demo available.</p>}
+      {data.demoSeeded && <p className="profile-note">This workspace began with fictional demo records. Add another farm below to start with your own records while keeping this demo available.</p>}
     </section>
-    {hosted && <section className="records-panel"><div className="records-head"><div><h3>Create a blank farm</h3><p>Start a separate workspace with no prefilled fields, expenses, or equipment.</p></div><Plus size={20}/></div>
+    {hosted && <section className="records-panel"><div className="records-head"><div><h3>Add another farm</h3><p>Manage a separate farm with its own fields, equipment, and records. To add machinery to this farm, use Farm Operations.</p></div><Plus size={20}/></div>
       <form className="record-form" onSubmit={create}>
         <label>Farm name<input required maxLength={100} value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Your farm name"/></label>
         <label>Location<input required maxLength={160} value={newLocation} onChange={event=>setNewLocation(event.target.value)} placeholder="Brookings, South Dakota"/></label>
         <label>Farming season<input required type="number" min="2000" max="2100" value={newSeasonYear} onChange={event=>setNewSeasonYear(event.target.value)}/></label>
-        <div className="form-actions"><button className="primary-button" type="submit" disabled={busy}>{busy ? "Creating…" : "Create blank farm"}</button></div>
+        <div className="form-actions"><button className="primary-button" type="submit" disabled={busy}>{busy ? "Creating…" : "Add farm"}</button></div>
       </form>
     </section>}
-    <div className="profile-links"><Link href="/farm-map"><MapPinned size={17}/> Select fields <ArrowRight size={15}/></Link><Link href="/settings/ai">AI configuration <ArrowRight size={15}/></Link></div>
+    <div className="profile-links"><Link href="/farm-map"><MapPinned size={17}/> Select fields <ArrowRight size={15}/></Link></div>
+    <details className="records-panel"><summary>Advanced setup</summary><p>For the person managing this app’s assistant connection and forecast integration.</p><Link className="text-link" href="/settings/ai">Connection and forecast setup <ArrowRight size={15}/></Link></details>
   </Shell>;
 }

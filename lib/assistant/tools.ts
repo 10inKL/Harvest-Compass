@@ -9,7 +9,7 @@ const string = { type: "string" };
 export const assistantTools: FunctionTool[] = [
   tool("get_farm_profile", "Get saved farm name, location, acreage, season and which data categories are unavailable."),
   tool("get_fields", "Get fields, crops, planted dates, acreage and recorded yield by field."),
-  tool("get_equipment", "Get saved machinery and availability; no capacity or rental quotes are stored."),
+  tool("get_equipment", "Get saved machinery, availability, and farmer-entered ownership or rental agreements. Agreement estimates are not logged expenses or verified market quotes."),
   tool("get_tasks", "Get operational tasks and deadlines."),
   tool("get_budget", "Get recorded expenses. No approved budget or supplier quotes are stored."),
   tool("get_harvest_progress", "Get logged harvest bushels, measured moisture, saved grain sales, and remaining inventory by crop/bin. Transfers and shrink are not tracked."),
@@ -25,7 +25,7 @@ export type ToolResult = { output: unknown; source?: Source; proposal?: Proposal
 const finite = (value: unknown, min = 0, max = 1_000_000) => typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
 const clean = (value: unknown, max = 500) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const date = (value: unknown) => value === null || (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value);
-const farmSource = (ctx: FarmContext, table: string): Source => ({ label: `${table} · ${ctx.source}` });
+const farmSource = (ctx: FarmContext, table: string): Source => ({ label: `${table} · ${ctx.source.includes("fictional") ? "Includes demo records" : "Your farm entries"}` });
 
 export async function runTool(name: string, args: unknown, ctx: FarmContext, session: AssistantSession, conversationId: string): Promise<ToolResult> {
   const a = args && typeof args === "object" && !Array.isArray(args) ? args as Record<string, unknown> : {};

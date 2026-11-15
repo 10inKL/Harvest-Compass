@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Map, Tractor, ListChecks, Sparkles, ChartNoAxesCombined, Leaf, Warehouse, Wheat, Settings2, SlidersHorizontal } from "lucide-react";
+import { LayoutDashboard, Map, Tractor, ListChecks, Sparkles, ChartNoAxesCombined, Leaf, Warehouse, Wheat, Settings2 } from "lucide-react";
 import { useFarm } from "./farm-provider";
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -13,7 +13,6 @@ const nav = [
   { href: "/ai-assistant", label: "AI Assistant", icon: Sparkles },
   { href: "/reports", label: "Reports & History", icon: ChartNoAxesCombined },
   { href: "/settings/farm", label: "Farm Settings", icon: Settings2 },
-  { href: "/settings/ai", label: "AI Configuration", icon: SlidersHorizontal },
 ];
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname(); const {data,hosted,harvestAvailable,user,signOut}=useFarm();
