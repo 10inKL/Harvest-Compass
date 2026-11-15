@@ -22,8 +22,8 @@ test("farm tools expose saved facts and demo provenance", async () => {
 });
 
 test("missing coordinates and unsupported records remain explicitly unavailable", async () => {
-  const weather = await runTool("get_weather_forecast", {}, context, session, "test");
-  assert.match(weather.output.unavailable, /coordinates are missing/);
+  const weather = await runTool("get_weather_forecast", { location: null }, { ...context, farm: { ...context.farm, location: null } }, session, "test");
+  assert.match(weather.output.unavailable, /No farm coordinates or place name/);
   const profile = await runTool("get_farm_profile", {}, context, session, "test");
   assert.ok(profile.output.unavailable.includes("labor roster"));
   assert.ok(profile.output.unavailable.includes("approved budget"));

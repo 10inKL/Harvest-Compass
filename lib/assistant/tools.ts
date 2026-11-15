@@ -13,7 +13,7 @@ export const assistantTools: FunctionTool[] = [
   tool("get_tasks", "Get operational tasks and deadlines."),
   tool("get_budget", "Get recorded expenses. No approved budget or supplier quotes are stored."),
   tool("get_harvest_progress", "Get logged harvest bushels, measured moisture, and inventory by crop/bin. Sales and shrink are not tracked."),
-  tool("get_weather_forecast", "Fetch the real NOAA/NWS forecast for saved farm coordinates, with source and retrieval time."),
+  tool("get_weather_forecast", "Fetch the real NOAA/NWS forecast. Use saved farm coordinates when available; for a city or place question, pass the exact place text. The result identifies whether the location was geocoded and approximate.", { type: "object", properties: { location: { type: ["string", "null"] } }, required: ["location"], additionalProperties: false }),
   tool("calculate_expected_production", "Calculate expected bushels using a stated yield-per-acre assumption. Never invent the assumption.", { type: "object", properties: { field_name: string, yield_bu_per_acre: number }, required: ["field_name", "yield_bu_per_acre"], additionalProperties: false }),
   tool("compare_equipment_scenarios", "Compare a specified combine delay with an explicit harvest rate and downtime cost assumption. Returns deterministic estimates, not quotes.", { type: "object", properties: { acres: number, harvest_rate_acres_per_hour: number, delay_hours: number, downtime_cost_per_hour: number }, required: ["acres", "harvest_rate_acres_per_hour", "delay_hours", "downtime_cost_per_hour"], additionalProperties: false }),
   tool("propose_plan_changes", "Create a pending task proposal for farmer review. Does not change the farm plan.", { type: "object", properties: { title: string, detail: string, due_on: { type: ["string", "null"] }, priority: { type: "string", enum: ["High", "Medium", "Low"] }, risk: string, estimated_cost: { type: ["number", "null"] } }, required: ["title", "detail", "due_on", "priority", "risk", "estimated_cost"], additionalProperties: false }),
@@ -42,8 +42,27 @@ export async function runTool(name: string, args: unknown, ctx: FarmContext, ses
       return { output: { entries: ctx.harvest.map(h => ({ ...h, crop: cropFor(h.fieldId), field: ctx.fields.find(f => f.id === h.fieldId)?.name ?? "Unknown" })), totalBushels: ctx.harvest.reduce((n, h) => n + h.bushels, 0), byCropAndBin: Object.fromEntries(groups), note: "Logged bushels only; sales, transfers and shrink are not deducted. Field completion and safe-to-harvest status cannot be inferred from bushels alone." }, source: farmSource(ctx, "Harvest log") };
     }
     case "get_weather_forecast": {
-      const { latitude, longitude } = ctx.farm;
-      if (latitude === null || longitude === null) return { output: { unavailable: "Farm coordinates are missing. Enter latitude and longitude in Settings → AI Configuration; location text alone is not precise enough for a field forecast." } };
+      let { latitude, longitude } = ctx.farm;
+      let locationSource = "saved farm coordinates";
+      let approximate = false;
+      let resolvedLocation = ctx.farm.location;
+      if (latitude === null || longitude === null) {
+        const place = clean(a.location, 160) || ctx.farm.location;
+        if (!place) return { output: { unavailable: "No farm coordinates or place name is available. Ask for a city/state or save a farm location." } };
+        try {
+          const geocodeUrl = new URL("https://nominatim.openstreetmap.org/search");
+          geocodeUrl.searchParams.set("format", "jsonv2");
+          geocodeUrl.searchParams.set("limit", "1");
+          geocodeUrl.searchParams.set("countrycodes", "us");
+          geocodeUrl.searchParams.set("q", place);
+          const geocode = await fetch(geocodeUrl, { headers: { "User-Agent": "HarvestCompass/0.1 (https://github.com/10inKL/Harvest-Compass)" }, signal: AbortSignal.timeout(8000), cache: "no-store" });
+          if (!geocode.ok) throw new Error("Location lookup failed");
+          const matches = await geocode.json() as { lat?: string; lon?: string; display_name?: string }[];
+          const match = matches[0];
+          if (!match?.lat || !match.lon) return { output: { unavailable: `I could not resolve “${place}” to a US location. Include a city and state, such as Madison, SD.` } };
+          latitude = Number(match.lat); longitude = Number(match.lon); resolvedLocation = match.display_name ?? place; locationSource = "geocoded place via OpenStreetMap Nominatim"; approximate = true;
+        } catch { return { output: { unavailable: "The location lookup is unavailable right now. No weather estimate was substituted." } }; }
+      }
       try {
         const headers = { "User-Agent": "HarvestCompass/0.1 (https://github.com/10inKL/Harvest-Compass)", "Accept": "application/geo+json" };
         const points = await fetch(`https://api.weather.gov/points/${latitude},${longitude}`, { headers, signal: AbortSignal.timeout(8000), cache: "no-store" });
@@ -55,7 +74,7 @@ export async function runTool(name: string, args: unknown, ctx: FarmContext, ses
         if (!forecast.ok) throw new Error("NOAA forecast request failed");
         const data = await forecast.json() as { properties?: { updated?: string; periods?: { name: string; startTime: string; temperature: number; temperatureUnit: string; shortForecast: string; detailedForecast: string; probabilityOfPrecipitation?: { value: number | null } }[] } };
         const retrievedAt = new Date().toISOString();
-        return { output: { periods: (data.properties?.periods ?? []).slice(0, 8), issuedAt: data.properties?.updated, retrievedAt, source: url, location: { latitude, longitude } }, source: { label: "NOAA National Weather Service forecast", url, retrievedAt } };
+        return { output: { periods: (data.properties?.periods ?? []).slice(0, 8), issuedAt: data.properties?.updated, retrievedAt, source: url, location: { name: resolvedLocation, latitude, longitude, source: locationSource, approximate }, note: approximate ? "This is a place-level forecast from geocoded text, not a saved field coordinate." : "This uses the farm's saved coordinates." }, source: { label: `NOAA National Weather Service forecast · ${locationSource}`, url, retrievedAt } };
       } catch { return { output: { unavailable: "The NOAA forecast is unavailable right now. Try again later; no weather estimate was substituted." } }; }
     }
     case "calculate_expected_production": {
