@@ -17,6 +17,7 @@ function estimateAcres(points: [number, number][]) {
   for (let i = 0; i < points.length - 1; i += 1) { const [y1, x1] = points[i]; const [y2, x2] = points[i + 1]; area += (x1 * scaleX) * (y2 * scaleY) - (x2 * scaleX) * (y1 * scaleY); }
   return Math.max(1, Math.round(Math.abs(area) / 2 / 4046.86));
 }
+function cropFromCdl(value: unknown): CandidateField["crop"] { return Number(value) === 5 ? "Soybeans" : "Corn"; }
 
 export default function FarmMap() {
   const { data, saveRecord, busy } = useFarm();
@@ -37,7 +38,7 @@ export default function FarmMap() {
       const collection = await response.json() as { features?: { id: string; geometry?: { coordinates?: number[][][][] }; properties?: Record<string, unknown> }[] };
       const fields = (collection.features ?? []).map((feature) => {
         const ring = feature.geometry?.coordinates?.[0]?.[0] ?? []; const properties = feature.properties ?? {};
-        return { id: feature.id, name: `USDA estimated field ${feature.id}`, crop: "Corn" as const, acres: Number(properties.acres ?? 0), source: "USDA NASS Crop Sequence Boundaries 2018-2025 (estimated)", coordinates: ring.map(([lng, lat]) => [lat, lng] as [number, number]) };
+        return { id: feature.id, name: `USDA estimated field ${feature.id}`, crop: cropFromCdl(properties.crop2025), acres: Number(properties.acres ?? 0), source: "USDA NASS Crop Sequence Boundaries 2018-2025 (estimated)", coordinates: ring.map(([lng, lat]) => [lat, lng] as [number, number]) };
       }).filter((field) => field.coordinates.length >= 4 && field.acres > 0);
       if (active && fields.length) { setMapCandidates(fields); setDataStatus(`${fields.length.toLocaleString()} USDA estimated boundaries loaded`); }
     }
