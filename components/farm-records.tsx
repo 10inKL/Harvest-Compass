@@ -7,10 +7,10 @@ import type { Field } from "@/lib/demo-data";
 type Kind = "fields" | "tasks" | "expenses" | "equipment";
 const labels: Record<Kind,string> = { fields:"Field", tasks:"Task", expenses:"Expense", equipment:"Equipment" };
 export function FarmRecords({ kind }: { kind: Kind }) {
-  const { data, setData } = useFarm(); const [adding,setAdding] = useState(false);
+  const { data, setData, hosted } = useFarm(); const [adding,setAdding] = useState(false);
   const [form,setForm] = useState<Record<string,string>>({});
   function update(key:string, value:string) { setForm(prev => ({...prev,[key]:value})); }
-  function remove(id:string) { setData(prev => ({...prev,[kind]: prev[kind].filter(item => item.id !== id)})); }
+  function remove(id:string) { if (!window.confirm(`Delete this ${labels[kind].toLowerCase()} record?`)) return; setData(prev => ({...prev,[kind]: prev[kind].filter(item => item.id !== id)})); }
   function submit(event:FormEvent) { event.preventDefault(); const id = newId();
     if(kind === "fields") { const item:Field={id,name:form.name.trim(),crop:form.crop as Field["crop"],acres:Number(form.acres),planted:form.planted,status:"On track",progress:0}; if(!item.name||item.acres<=0)return; setData(prev=>({...prev,fields:[...prev.fields,item]})); }
     if(kind === "tasks") { const item:FarmTask={id,title:form.title.trim(),detail:form.detail.trim(),due:form.due,priority:form.priority as FarmTask["priority"],done:false}; if(!item.title||!item.due)return; setData(prev=>({...prev,tasks:[...prev.tasks,item]})); }
@@ -20,7 +20,7 @@ export function FarmRecords({ kind }: { kind: Kind }) {
   }
   function toggleTask(id:string) { setData(prev=>({...prev,tasks:prev.tasks.map(t=>t.id===id?{...t,done:!t.done}:t)})); }
   function changeEquipment(id:string,status:Equipment["status"]) { setData(prev=>({...prev,equipment:prev.equipment.map(e=>e.id===id?{...e,status}:e)})); }
-  return <section className="records-panel"><div className="records-head"><div><h3>{labels[kind]} records</h3><p>Saved in this browser · {data[kind].length} records</p></div><button className="primary-button" onClick={()=>setAdding(v=>!v)}><Plus size={16}/> Add {labels[kind].toLowerCase()}</button></div>
+  return <section className="records-panel"><div className="records-head"><div><h3>{labels[kind]} records</h3><p>{hosted ? "Connected to Supabase" : "Saved in this browser"} · {data[kind].length} records</p></div><button className="primary-button" onClick={()=>setAdding(v=>!v)}><Plus size={16}/> Add {labels[kind].toLowerCase()}</button></div>
   {adding && <form className="record-form" onSubmit={submit}>
     {kind==="fields" && <><label>Field name<input required value={form.name??""} onChange={e=>update("name",e.target.value)} placeholder="West Ridge"/></label><label>Crop<select required value={form.crop??""} onChange={e=>update("crop",e.target.value)}><option value="">Select crop</option><option>Corn</option><option>Soybeans</option></select></label><label>Acres<input required type="number" min="1" value={form.acres??""} onChange={e=>update("acres",e.target.value)}/></label><label>Planting date<input required type="date" value={form.planted??""} onChange={e=>update("planted",e.target.value)}/></label></>}
     {kind==="tasks" && <><label>Task<input required value={form.title??""} onChange={e=>update("title",e.target.value)} placeholder="Scout North Quarter"/></label><label>Details<input value={form.detail??""} onChange={e=>update("detail",e.target.value)}/></label><label>Due date<input required type="date" value={form.due??""} onChange={e=>update("due",e.target.value)}/></label><label>Priority<select required value={form.priority??""} onChange={e=>update("priority",e.target.value)}><option value="">Select priority</option><option>High</option><option>Medium</option><option>Low</option></select></label></>}

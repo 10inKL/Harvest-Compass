@@ -1,5 +1,9 @@
-# Phase 2 progress
+# Phase 2 status
 
-Fields, tasks, expenses, and equipment are editable in the app and persist in browser local storage. Dashboard acreage, field count, open tasks, estimated expenses, and the expense chart recalculate from those records. This is a single-browser interim store, not shared farm data.
+The app supports editable fields, tasks, expenses, and equipment. Dashboard acreage, field count, open tasks, estimated expenses, and the expense chart derive from these records.
 
-The Supabase schema and row-level security policies are in `supabase/migrations/202611140001_initial.sql`. To connect hosted persistence and authentication, create a Supabase project, apply that migration, and provide the project URL and **publishable** key. Never provide a service-role key. Hosted data syncing and sign-in are not active yet.
+With `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configured in `.env.local`, the app uses Supabase email sign-in and stores records in the hosted database. Each new account gets a clearly labeled fictional Prairie Creek Farm demo dataset. The SQL schema and row-level security policies live in `supabase/migrations/202611140001_initial.sql`.
+
+Without those environment variables, the app runs in demo mode and saves records in browser local storage. Never commit `.env.local` or use a service-role key in the browser.
+
+The AI assistant and real decision approvals are still future work. Farm location and season are demo constants for this MVP.

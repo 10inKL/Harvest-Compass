@@ -8,9 +8,9 @@
 - Pages for Farm Map, Farm Operations, Action Plan, AI Assistant, and Reports & History.
 - Add and delete fields, tasks, expenses, and equipment. Complete or reopen tasks and update equipment status.
 - Dashboard totals and expense chart update from edited records.
-- Records persist in the current browser through local storage. The initial South Dakota farm records are **fictional demo data**.
+- With Supabase configured, records persist in the hosted database for signed-in users. Without it, records persist in the current browser through local storage. The initial South Dakota farm records are **fictional demo data**.
 
-The AI assistant page previews the intended workflow. No AI model, live weather feed, maps, or hosted database is connected yet. Changes are not shared across browsers or users. Farmers will approve important AI-suggested plan changes in a later phase.
+The AI assistant page previews the intended workflow. No AI model, live weather feed, or live maps are connected yet. Supabase-backed records are scoped to signed-in farm members. Farmers will approve important AI-suggested plan changes in a later phase.
 
 ## Run locally
 
@@ -33,9 +33,9 @@ npm run build
 - `app/`: Next.js App Router pages and global styles.
 - `components/`: shared shell, chart, farm data provider, and record forms.
 - `lib/`: TypeScript farm types and demo seed data.
-- `supabase/migrations/`: proposed hosted schema and row-level security policies, not yet applied.
+- `supabase/migrations/`: hosted schema and row-level security policies.
 - `PHASE2.md`: current persistence status and remaining connection work.
 
 ## Planned hosted setup
 
-A Supabase project can replace browser storage using the schema in `supabase/migrations/202611140001_initial.sql`. Copy `.env.example` to `.env.local` and add the project URL and **publishable** key when hosted integration is implemented. Do not put secret or service-role keys in client environment variables or commit `.env.local`.
+To use hosted storage, apply `supabase/migrations/202611140001_initial.sql` to a Supabase project. Copy `.env.example` to `.env.local` and add the project URL and **publishable** key. Restart the development server, then sign in with an email link. Do not put secret or service-role keys in client environment variables or commit `.env.local`.

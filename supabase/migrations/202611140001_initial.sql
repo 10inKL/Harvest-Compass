@@ -31,3 +31,6 @@ create policy "members manage fields" on public.fields for all using (public.is_
 create policy "members manage tasks" on public.farm_tasks for all using (public.is_farm_member(farm_id)) with check (public.is_farm_member(farm_id));
 create policy "members manage expenses" on public.expenses for all using (public.is_farm_member(farm_id)) with check (public.is_farm_member(farm_id));
 create policy "members manage equipment" on public.equipment for all using (public.is_farm_member(farm_id)) with check (public.is_farm_member(farm_id));
+-- Required when the project disables automatic API grants for new tables.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.farms, public.farm_members, public.fields, public.farm_tasks, public.expenses, public.equipment to authenticated;
