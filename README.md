@@ -26,15 +26,18 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 
 The app works in clearly labeled demo mode when Supabase is not configured. Never commit `.env.local` or expose the OpenAI key with a `NEXT_PUBLIC_` prefix.
 
-## Current vertical slices
+## Working MVP
 
-- `/dashboard` — seasonal overview with expenses, tasks, fields, and AI insight preview.
+- `/dashboard` — live seasonal overview calculated from the selected farm's saved fields, tasks, expenses, equipment, harvest entries, and grain sales.
 - `/farm-map` — satellite/street map with selectable suggested boundaries. Confirmed boundaries are stored as GeoJSON and labeled with their source.
 - `/ai-assistant` — streaming OpenAI copilot with farm context, deterministic tools, saved conversations, and approval-gated proposals.
-- `/harvest` and `/inventory` — persistent harvest and grain inventory records when the Supabase harvest migration is enabled.
+- `/operations` and `/action-plan` — edit equipment, fields, and tasks; records update the dashboard and assistant context.
+- `/harvest` and `/inventory` — record harvest by field and storage bin, record sales, and see remaining inventory and revenue.
+- `/reports` — expense and crop summaries from saved records, with a downloadable CSV.
+- `/settings/farm` — edit the farm profile, create a blank farm, and switch workspaces. New accounts start empty; older fictional demo workspaces remain clearly labeled.
 - `/settings/ai` — server-side API configuration status and test connection controls.
 
-Run `npm run lint` and `npm run build` before a demo. If the hosted database predates the map feature, run `supabase/migrations/202611150003_field_boundaries.sql` once in the Supabase SQL Editor.
+Run `npm run lint` and `npm run build` before a demo. Hosted databases need migrations through `supabase/migrations/202611150006_grain_sales.sql`; the current hosted project has the grain-sales migration applied.
 
 ### USDA field-boundary pilot
 

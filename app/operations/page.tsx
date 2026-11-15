@@ -1,4 +1,25 @@
 "use client";
-import { Tractor, Sprout, Wheat, Warehouse, Wrench } from "lucide-react";
-import { SectionPage } from "@/components/section-page";
-export default function Operations() { return <SectionPage records="equipment" eyebrow="SEASON WORKFLOW" title="Keep the season moving" description="Track equipment readiness and review the work from planting through harvest preparation." icon={Tractor} note="Equipment status uses saved records." items={[{title:"Planting",description:"All four fields have planting records for the 2026 season.",meta:"100% COMPLETE",icon:Sprout},{title:"Crop care",description:"Field scouting and crop checks are in progress across 1,280 acres.",meta:"76% COMPLETE",icon:Wheat},{title:"Equipment readiness",description:"Combine service is scheduled before the expected harvest window.",meta:"UPCOMING",icon:Wrench},{title:"Storage & logistics",description:"Review main bin capacity ahead of first grain deliveries.",meta:"PLANNING",icon:Warehouse}]}/>; }
+import Link from "next/link";
+import { ArrowRight, Sprout, Tractor, Wrench, Wheat } from "lucide-react";
+import { Shell } from "@/components/shell";
+import { FarmRecords } from "@/components/farm-records";
+import { useFarm } from "@/components/farm-provider";
+
+export default function Operations() {
+  const { data } = useFarm();
+  const planted = data.fields.filter(field => field.planted !== "Not set" && !!field.planted).length;
+  const attention = data.fields.filter(field => field.status === "Needs attention").length;
+  const service = data.equipment.filter(item => item.status === "Needs service").length;
+  const ready = data.equipment.filter(item => item.status === "Ready").length;
+  return <Shell>
+    <div className="demo-label">{data.demoSeeded ? "DEMO-SEED WORKSPACE · EDIT RECORDS TO MATCH YOUR FARM" : "SAVED FARM OPERATIONS"}</div>
+    <section className="section-hero"><div className="section-icon"><Tractor size={30}/></div><div><span className="eyebrow">BEFORE & DURING HARVEST</span><h2>Keep the season moving</h2><p>Update field progress and equipment status here. The dashboard and assistant use these same saved records.</p></div></section>
+    <section className="harvest-stats" aria-label="Operation status">
+      <div className="kpi"><span className="kpi-icon green"><Sprout size={21}/></span><span className="kpi-label">Fields planted</span><strong>{planted} <small>of {data.fields.length}</small></strong></div>
+      <div className="kpi"><span className="kpi-icon peach"><Wheat size={21}/></span><span className="kpi-label">Fields needing attention</span><strong>{attention}</strong></div>
+      <div className="kpi"><span className="kpi-icon blue"><Wrench size={21}/></span><span className="kpi-label">Equipment ready</span><strong>{ready} <small>of {data.equipment.length}</small></strong><span className="kpi-note">{service} need service</span></div>
+    </section>
+    <div className="profile-links"><Link href="/farm-map">Select an estimated field <ArrowRight size={15}/></Link><Link href="/action-plan">Manage tasks <ArrowRight size={15}/></Link><Link href="/harvest">Record harvest <ArrowRight size={15}/></Link></div>
+    <FarmRecords kind="fields"/><FarmRecords kind="equipment"/>
+  </Shell>;
+}

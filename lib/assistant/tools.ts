@@ -12,7 +12,7 @@ export const assistantTools: FunctionTool[] = [
   tool("get_equipment", "Get saved machinery and availability; no capacity or rental quotes are stored."),
   tool("get_tasks", "Get operational tasks and deadlines."),
   tool("get_budget", "Get recorded expenses. No approved budget or supplier quotes are stored."),
-  tool("get_harvest_progress", "Get logged harvest bushels, measured moisture, and inventory by crop/bin. Sales and shrink are not tracked."),
+  tool("get_harvest_progress", "Get logged harvest bushels, measured moisture, saved grain sales, and remaining inventory by crop/bin. Transfers and shrink are not tracked."),
   tool("get_weather_forecast", "Fetch the real NOAA/NWS forecast. Use saved farm coordinates when available; for a city or place question, pass the exact place text. The result identifies whether the location was geocoded and approximate.", { type: "object", properties: { location: { type: ["string", "null"] } }, required: ["location"], additionalProperties: false }),
   tool("calculate_expected_production", "Calculate expected bushels using a stated yield-per-acre assumption. Never invent the assumption.", { type: "object", properties: { field_name: string, yield_bu_per_acre: number }, required: ["field_name", "yield_bu_per_acre"], additionalProperties: false }),
   tool("compare_equipment_scenarios", "Compare a specified combine delay with an explicit harvest rate and downtime cost assumption. Returns deterministic estimates, not quotes.", { type: "object", properties: { acres: number, harvest_rate_acres_per_hour: number, delay_hours: number, downtime_cost_per_hour: number }, required: ["acres", "harvest_rate_acres_per_hour", "delay_hours", "downtime_cost_per_hour"], additionalProperties: false }),
@@ -39,7 +39,8 @@ export async function runTool(name: string, args: unknown, ctx: FarmContext, ses
     case "get_harvest_progress": {
       const groups = new Map<string, number>();
       for (const h of ctx.harvest) { const key = `${cropFor(h.fieldId)} · ${h.storageBin}`; groups.set(key, (groups.get(key) ?? 0) + h.bushels); }
-      return { output: { entries: ctx.harvest.map(h => ({ ...h, crop: cropFor(h.fieldId), field: ctx.fields.find(f => f.id === h.fieldId)?.name ?? "Unknown" })), totalBushels: ctx.harvest.reduce((n, h) => n + h.bushels, 0), byCropAndBin: Object.fromEntries(groups), note: "Logged bushels only; sales, transfers and shrink are not deducted. Field completion and safe-to-harvest status cannot be inferred from bushels alone." }, source: farmSource(ctx, "Harvest log") };
+      for (const sale of ctx.sales) { const key = `${sale.crop} · ${sale.storageBin}`; groups.set(key, (groups.get(key) ?? 0) - sale.bushels); }
+      return { output: { entries: ctx.harvest.map(h => ({ ...h, crop: cropFor(h.fieldId), field: ctx.fields.find(f => f.id === h.fieldId)?.name ?? "Unknown" })), sales: ctx.sales, totalHarvestedBushels: ctx.harvest.reduce((n, h) => n + h.bushels, 0), totalSoldBushels: ctx.sales.reduce((n, s) => n + s.bushels, 0), recordedSalesRevenue: ctx.sales.reduce((n, s) => n + s.bushels * s.pricePerBushel, 0), remainingByCropAndBin: Object.fromEntries(groups), note: "Remaining balance deducts recorded sales only. Transfers and shrink are not tracked. Field completion and safe-to-harvest status cannot be inferred from bushels alone." }, source: farmSource(ctx, "Harvest log and grain sales") };
     }
     case "get_weather_forecast": {
       let { latitude, longitude } = ctx.farm;

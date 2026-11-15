@@ -11,6 +11,7 @@ export type FarmContext = {
   tasks: { title: string; detail: string; dueOn: string | null; priority: string; done: boolean }[];
   expenses: { category: string; amount: number; incurredOn: string; note: string }[];
   harvest: { fieldId: string; harvestedOn: string; bushels: number; moisturePercent: number | null; storageBin: string }[];
+  sales: { crop: string; storageBin: string; soldOn: string; bushels: number; pricePerBushel: number; buyer: string }[];
 };
 
 export async function getSession(request: Request): Promise<AssistantSession> {
@@ -22,9 +23,11 @@ export async function getSession(request: Request): Promise<AssistantSession> {
   const db = createClient(url, key, { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false, autoRefreshToken: false } });
   const user = await db.auth.getUser(token);
   if (user.error || !user.data.user) throw new Error("Your session expired. Sign in again.");
-  const membership = await db.from("farm_members").select("farm_id").eq("user_id", user.data.user.id).limit(1).maybeSingle();
-  if (membership.error || !membership.data) throw new Error("No farm workspace is available for this account.");
-  return { db, userId: user.data.user.id, farmId: membership.data.farm_id, demo: false };
+  const membership = await db.from("farm_members").select("farm_id").eq("user_id", user.data.user.id);
+  if (membership.error || !membership.data?.length) throw new Error("No farm workspace is available for this account.");
+  const preferred = user.data.user.user_metadata?.active_farm_id;
+  const farmId = membership.data.find(row => row.farm_id === preferred)?.farm_id ?? membership.data[0].farm_id;
+  return { db, userId: user.data.user.id, farmId, demo: false };
 }
 
 export async function getFarmContext(session: AssistantSession): Promise<FarmContext> {
@@ -36,6 +39,7 @@ export async function getFarmContext(session: AssistantSession): Promise<FarmCon
     tasks: initialFarmState.tasks.map(t => ({ title: t.title, detail: t.detail, dueOn: t.due, priority: t.priority, done: t.done })),
     expenses: initialFarmState.expenses.map(e => ({ category: e.category, amount: e.amount, incurredOn: e.date, note: e.note })),
     harvest: [],
+    sales: [],
   };
   const db = session.db;
   const id = session.farmId;
@@ -46,9 +50,11 @@ export async function getFarmContext(session: AssistantSession): Promise<FarmCon
     db.from("farm_tasks").select("title,detail,due_on,priority,done").eq("farm_id", id),
     db.from("expenses").select("category,amount,incurred_on,note").eq("farm_id", id),
     db.from("harvest_entries").select("field_id,harvested_on,bushels,moisture_percent,storage_bin").eq("farm_id", id),
+    db.from("grain_sales").select("crop,storage_bin,sold_on,bushels,price_per_bushel,buyer").eq("farm_id", id),
   ]);
-  for (const result of results) if (result.error) throw new Error(`Could not load farm records: ${result.error.message}`);
-  const [farm, fields, equipment, tasks, expenses, harvest] = results.map(r => r.data);
+  for (const result of results.slice(0, 6)) if (result.error) throw new Error(`Could not load farm records: ${result.error.message}`);
+  if (results[6].error && !["PGRST205", "42P01"].includes(results[6].error.code)) throw new Error(`Could not load farm records: ${results[6].error.message}`);
+  const [farm, fields, equipment, tasks, expenses, harvest, sales] = results.map(r => r.data);
   const f = farm as { name: string; location: string | null; season_year: number; latitude: number | null; longitude: number | null; demo_seeded: boolean };
   return {
     source: f.demo_seeded ? "saved records including fictional demo seed" : "saved Supabase records",
@@ -58,6 +64,7 @@ export async function getFarmContext(session: AssistantSession): Promise<FarmCon
     tasks: ((tasks ?? []) as { title: string; detail: string; due_on: string | null; priority: string; done: boolean }[]).map(x => ({ title: x.title, detail: x.detail, dueOn: x.due_on, priority: x.priority, done: x.done })),
     expenses: ((expenses ?? []) as { category: string; amount: number; incurred_on: string; note: string }[]).map(x => ({ category: x.category, amount: Number(x.amount), incurredOn: x.incurred_on, note: x.note })),
     harvest: ((harvest ?? []) as { field_id: string; harvested_on: string; bushels: number; moisture_percent: number | null; storage_bin: string }[]).map(x => ({ fieldId: x.field_id, harvestedOn: x.harvested_on, bushels: Number(x.bushels), moisturePercent: x.moisture_percent === null ? null : Number(x.moisture_percent), storageBin: x.storage_bin })),
+    sales: ((sales ?? []) as { crop: string; storage_bin: string; sold_on: string; bushels: number; price_per_bushel: number; buyer: string }[]).map(x => ({ crop: x.crop, storageBin: x.storage_bin, soldOn: x.sold_on, bushels: Number(x.bushels), pricePerBushel: Number(x.price_per_bushel), buyer: x.buyer })),
   };
 }
 
