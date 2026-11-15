@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef } from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useCallback, useEffect, useRef } from "react";
 import type { Map as LeafletMap, LayerGroup } from "leaflet";
 import type { CandidateField } from "@/lib/map-data";
 
@@ -7,7 +8,7 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect }: { candidates
   const node = useRef<HTMLDivElement>(null);
   const map = useRef<LeafletMap | null>(null);
   const layers = useRef<LayerGroup | null>(null);
-  function renderPolygons(L: typeof import("leaflet")) {
+  const renderPolygons = useCallback((L: typeof import("leaflet")) => {
     if (!layers.current) return;
     layers.current.clearLayers();
     for (const candidate of candidates) {
@@ -16,7 +17,7 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect }: { candidates
       polygon.on("click", () => onSelect(candidate));
       polygon.addTo(layers.current);
     }
-  }
+  }, [candidates, selectedId, onSelect]);
   useEffect(() => {
     let active = true;
     void import("leaflet").then(L => {
@@ -33,6 +34,6 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect }: { candidates
     });
     return () => { active = false; map.current?.remove(); map.current = null; layers.current = null; };
   }, []);
-  useEffect(() => { if (map.current) void import("leaflet").then(L => renderPolygons(L)); }, [candidates, selectedId]);
+  useEffect(() => { if (map.current) void import("leaflet").then(L => renderPolygons(L)); }, [renderPolygons]);
   return <div ref={node} className="farm-map-canvas" aria-label="Interactive suggested field boundary map"/>;
 }
