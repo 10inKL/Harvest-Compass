@@ -34,3 +34,17 @@ The app works in clearly labeled demo mode when Supabase is not configured. Neve
 - `/settings/ai` — server-side API configuration status and test connection controls.
 
 Run `npm run lint` and `npm run build` before a demo. If the hosted database predates the map feature, run `supabase/migrations/202611150003_field_boundaries.sql` once in the Supabase SQL Editor.
+
+### USDA field-boundary pilot
+
+The USDA NASS 2018–2025 archive is intentionally not committed to GitHub. It is downloaded locally and filtered to Brookings County before import:
+
+```bash
+python3 -m venv /tmp/harvestcompass-csb-env
+/tmp/harvestcompass-csb-env/bin/pip install geopandas pyogrio
+/tmp/harvestcompass-csb-env/bin/python scripts/extract_csb_county.py \
+  data/csb/NationalCSB_2018-2025_rev23.zip \
+  data/csb/brookings-csb.geojson
+```
+
+Run `supabase/migrations/202611150004_csb_boundaries.sql` after enabling PostGIS, then bulk-load the extracted county GeoJSON with a GIS-capable importer. The app endpoint `/api/map/fields` returns only the current bounding-box subset as GeoJSON. USDA CSB polygons are estimates of crop fields—not legal, ownership, or FSA boundaries—and the UI labels them accordingly.
