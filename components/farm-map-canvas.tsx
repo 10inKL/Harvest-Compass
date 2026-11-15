@@ -10,6 +10,8 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect, drawing, onDra
   const layers = useRef<LayerGroup | null>(null);
   const drawPoints = useRef<[number, number][]>([]);
   const drawLayer = useRef<Polygon | null>(null);
+  const drawingRef = useRef(drawing);
+  useEffect(() => { drawingRef.current = drawing; }, [drawing]);
   const renderPolygons = useCallback((L: typeof import("leaflet")) => {
     if (!layers.current) return;
     layers.current.clearLayers();
@@ -33,7 +35,7 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect, drawing, onDra
       layers.current = L.layerGroup().addTo(instance);
       renderPolygons(L);
       instance.on("click", (event) => {
-        if (!drawing) return;
+        if (!drawingRef.current) return;
         drawPoints.current = [...drawPoints.current, [event.latlng.lat, event.latlng.lng]];
         drawLayer.current?.remove();
         drawLayer.current = L.polygon(drawPoints.current, { color: "#f7d37b", weight: 3, fillColor: "#f7d37b", fillOpacity: .28 }).addTo(instance);
