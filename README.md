@@ -40,6 +40,23 @@ npm run build
 
 To use hosted storage, apply `supabase/migrations/202611140001_initial.sql` to a Supabase project. Copy `.env.example` to `.env.local` and add the project URL and **publishable** key. Restart the development server, then sign in with an email link. Do not put secret or service-role keys in client environment variables or commit `.env.local`.
 
+## AI Assistant
+
+Apply `supabase/migrations/202611150002_assistant.sql` after the initial and harvest migrations. It adds private chat history, reviewable task proposals, an atomic approval function, and optional farm coordinates. The assistant uses the signed-in user's Supabase token and existing row-level security; it does not use a service-role key.
+
+Add `OPENAI_API_KEY` manually to `.env.local` and restart the server. `OPENAI_MODEL` is optional and defaults to `gpt-5-mini`. In production, configure both as server-side hosting environment variables. Supabase sign-in is required for AI use so chats remain private and persistent. Settings → AI Configuration reports only whether a key exists. This project deliberately does not offer browser-based key saving, because it has no encrypted secret store. The Test connection button makes a live OpenAI call only when clicked.
+
+The assistant uses the official OpenAI Node SDK Responses API with streaming and automatic function calling. Farm facts come from saved Supabase records. NOAA forecasts require farm coordinates saved in Settings; missing coordinates or an unavailable NOAA service produce an explicit unavailable result. Supplies, labor bookings, approved budgets, and historical yields beyond logged harvests are not in the current schema and are reported as missing. Production and equipment comparisons require stated assumptions. Proposed changes remain pending until the farmer approves them, at which point the app adds a task to the Action Plan. Conversations and proposals are private to the signed-in farmer.
+
+After you configure the key and explicitly choose to test live AI, try these prompts in `/ai-assistant`:
+
+1. `Explain crop rotation in plain language.` The assistant should answer naturally without needing farm tools.
+2. `What supplies and labor bookings do I have?` It should say those categories are not stored yet.
+3. `Summarize my fields, expenses, and logged harvest.` It should use saved records, flag demo-seeded entries, and show record sources.
+4. `My combine is delayed 48 hours. Compare the schedule for 320 acres at 20 acres per hour, assuming $125 per hour of delay cost, and propose a task to check repair options.` It should show the assumptions, avoid inventing quotes, and present a pending approval card. Only clicking **Approve and add task** changes the Action Plan.
+
+`node --test tests/assistant-*.test.mjs` checks production and delay arithmetic, demo provenance, missing-data behavior, and proposal safety without contacting OpenAI or NOAA.
+
 ## Harvest and inventory
 
 Record harvested bushels by field, date, moisture, and storage bin at `/harvest`. `/inventory` groups those entries by crop and bin. Inventory is calculated from harvest records and does not yet subtract sales, transfers, or shrink. Apply `supabase/migrations/202611150001_harvest_entries.sql` after the initial migration to enable hosted harvest logging.

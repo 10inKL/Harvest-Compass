@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase-client";
 const STORAGE_KEY = "harvestcompass-farm-v1";
 type RecordKind = keyof typeof tables;
 type FarmRecord = FarmState["fields"][number] | FarmState["tasks"][number] | FarmState["expenses"][number] | FarmState["equipment"][number] | FarmState["harvestEntries"][number];
-type FarmContext = { data: FarmState; ready: boolean; hosted: boolean; harvestAvailable: boolean; user: User | null; busy: boolean; error: string; saveRecord: (kind: RecordKind, record: FarmRecord) => Promise<boolean>; deleteRecord: (kind: RecordKind, id: string) => Promise<boolean>; signOut: () => Promise<void> };
+type FarmContext = { data: FarmState; ready: boolean; hosted: boolean; harvestAvailable: boolean; user: User | null; busy: boolean; error: string; saveRecord: (kind: RecordKind, record: FarmRecord) => Promise<boolean>; deleteRecord: (kind: RecordKind, id: string) => Promise<boolean>; refreshFarm: () => Promise<void>; signOut: () => Promise<void> };
 const Context = createContext<FarmContext | null>(null);
 const tables = { fields: "fields", tasks: "farm_tasks", expenses: "expenses", equipment: "equipment", harvestEntries: "harvest_entries" } as const;
 function demoDate(value: string) {
@@ -32,6 +32,8 @@ async function loadFarm(user: User): Promise<{ state: FarmState; farmId: string;
     if (created.error) throw created.error;
     const seed:FarmState={...initialFarmState,fields:initialFarmState.fields.map(f=>({...f,id:newId()})),tasks:initialFarmState.tasks.map(t=>({...t,id:newId()})),expenses:initialFarmState.expenses.map(e=>({...e,id:newId()})),equipment:initialFarmState.equipment.map(e=>({...e,id:newId()})),harvestEntries:[]};
     for (const kind of Object.keys(tables) as (keyof typeof tables)[]) { const rows=seed[kind].map(item=>toRow(kind,item,farmId!)); if(rows.length===0)continue; const result=await supabase.from(tables[kind]).insert(rows); if(result.error) throw result.error; }
+    // Older deployments may not have the assistant migration yet; its backfill detects these demo expenses later.
+    await supabase.from("farms").update({demo_seeded:true}).eq("id",farmId);
   }
   const [farm,fields,tasks,expenses,equipment,harvestEntries]=await Promise.all([
     supabase.from("farms").select("name").eq("id",farmId).single(),
@@ -102,7 +104,7 @@ export function FarmProvider({children}:{children:React.ReactNode}) {
   if(supabase&&!ready)return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">🌾 HarvestCompass</div><p>Loading your farm workspace…</p></div></div>;
   if(supabase&&user&&loadFailed)return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">🌾 HarvestCompass</div><h1>Could not load your farm</h1><p className="auth-error">{error||"Please try again."}</p><button className="primary-button" onClick={()=>window.location.reload()}>Retry</button></div></div>;
   if(supabase&&!user)return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">🌾 HarvestCompass</div><h1>Welcome to your farm workspace</h1><p>Sign in with an email link to keep your farm records in Supabase.</p>{sent?<p className="auth-notice">Check your email for a sign-in link.</p>:<form onSubmit={signIn}><label>Email address<input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label><button className="primary-button">Send sign-in link</button></form>}{error&&<p className="auth-error">{error}</p>}</div></div>;
-  return <Context.Provider value={{data,ready,hosted:!!supabase,harvestAvailable,user,busy,error,saveRecord,deleteRecord,signOut}}>{error&&<div className="sync-error" role="alert">Save error: {error}</div>}{children}</Context.Provider>;
+  return <Context.Provider value={{data,ready,hosted:!!supabase,harvestAvailable,user,busy,error,saveRecord,deleteRecord,refreshFarm:reload,signOut}}>{error&&<div className="sync-error" role="alert">Save error: {error}</div>}{children}</Context.Provider>;
 }
 function messageOf(error:unknown){return error&&typeof error==="object"&&"message" in error?String(error.message):"Something went wrong. Please try again.";}
 export function useFarm(){const value=useContext(Context);if(!value)throw new Error("FarmProvider is missing");return value;}
