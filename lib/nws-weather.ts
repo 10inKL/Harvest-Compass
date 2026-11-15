@@ -29,6 +29,6 @@ export async function getNwsWeather(location:FarmWeather["location"]):Promise<Fa
   const days=forecastDays(forecast.properties.periods??[],p.timeZone);
   if(!days.length)throw new Error("No forecast available");
   const nearby=p.relativeLocation?.properties;
-  const resolved=location.basis==="Your saved weather location"&&nearby?.city?{...location,name:"Near "+nearby.city+(nearby.state?", "+nearby.state:"")}:location;
+  const resolved=nearby?.city?{...location,name:"Near "+nearby.city+(nearby.state?", "+nearby.state:""),basis:location.basis==="Forecast near your mapped field"?"Field: "+location.name:location.basis}:location;
   return {location:resolved,timeZone:p.timeZone,days,current,forecastUrl:p.forecast,issuedAt:forecast.properties.updateTime??forecast.properties.updated??forecast.properties.generatedAt??null,retrievedAt:new Date().toISOString()};
 }
