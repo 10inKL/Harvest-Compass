@@ -48,3 +48,5 @@ python3 -m venv /tmp/harvestcompass-csb-env
 ```
 
 Run `supabase/migrations/202611150004_csb_boundaries.sql` after enabling PostGIS, then bulk-load the extracted county GeoJSON with a GIS-capable importer. The app endpoint `/api/map/fields` returns only the current bounding-box subset as GeoJSON. USDA CSB polygons are estimates of crop fields—not legal, ownership, or FSA boundaries—and the UI labels them accordingly.
+
+For a direct Postgres import, install `psycopg[binary]`, set a server-side `SUPABASE_DB_URL` temporarily, and run `scripts/import_csb_supabase.py`. Do not commit that connection string.
