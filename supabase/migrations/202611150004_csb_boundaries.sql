@@ -39,10 +39,11 @@ language sql stable security invoker set search_path = public, extensions as $$
       )
     )), '[]'::jsonb)
   )
-  from public.csb_boundaries b
-  where b.geom && extensions.st_transform(
-    extensions.st_setsrid(extensions.st_makeenvelope(min_lng, min_lat, max_lng, max_lat), 4326), 4326
-  );
+  from (
+    select * from public.csb_boundaries
+    where geom && extensions.st_makeenvelope(min_lng, min_lat, max_lng, max_lat, 4326)
+    order by csbid limit 500
+  ) b;
 $$;
 revoke all on function public.get_csb_boundaries_geojson(double precision, double precision, double precision, double precision) from public;
 grant execute on function public.get_csb_boundaries_geojson(double precision, double precision, double precision, double precision) to authenticated;

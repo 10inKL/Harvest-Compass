@@ -19,6 +19,7 @@ Create `.env.local` in the project root for live integrations. Keep secrets serv
 ```env
 OPENAI_API_KEY=your-key
 OPENAI_MODEL=gpt-5-mini
+GEOAPIFY_API_KEY=your-free-tier-key
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
@@ -47,6 +48,8 @@ python3 -m venv /tmp/harvestcompass-csb-env
   data/csb/brookings-csb.geojson
 ```
 
-Run `supabase/migrations/202611150004_csb_boundaries.sql` after enabling PostGIS, then bulk-load the extracted county GeoJSON with a GIS-capable importer. The app endpoint `/api/map/fields` returns only the current bounding-box subset as GeoJSON. USDA CSB polygons are estimates of crop fields—not legal, ownership, or FSA boundaries—and the UI labels them accordingly.
+Run `supabase/migrations/202611150004_csb_boundaries.sql`, then bulk-load the extracted GeoJSON. The extractor accepts `--state-fips 46` for all South Dakota, or add `--county-fips 011` for the smaller Brookings pilot. The full South Dakota extract contains 725,473 polygons and is about 1.2 GB as GeoJSON, so check the hosted database storage allowance before importing it. The app endpoint `/api/map/fields` returns a bounded visible-area subset as GeoJSON. USDA CSB polygons are estimates of crop fields—not legal, ownership, or FSA boundaries—and the UI labels them accordingly.
+
+Location autocomplete uses Geoapify's free tier with `GEOAPIFY_API_KEY` kept on the server. It accepts US cities, addresses and ZIP codes; coordinates work without a key. Saved field names are suggested from the current farm. No location searches are restricted to South Dakota, but estimated boundaries are shown only where USDA data has actually been imported. The public Nominatim endpoint is not used for autocomplete because its usage policy forbids it.
 
 For a direct Postgres import, install `psycopg[binary]`, set a server-side `SUPABASE_DB_URL` temporarily, and run `scripts/import_csb_supabase.py`. Do not commit that connection string.

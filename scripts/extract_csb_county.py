@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract a small USDA CSB county pilot from the official national geodatabase.
+"""Extract USDA CSB polygons for one state, optionally one county.
 
 Install outside the Next.js app: python -m venv /tmp/hc-csb &&
 /tmp/hc-csb/bin/pip install geopandas pyogrio
@@ -18,7 +18,7 @@ def main() -> None:
     parser.add_argument("zip_file", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--state-fips", default="46")
-    parser.add_argument("--county-fips", default="011")
+    parser.add_argument("--county-fips")
     args = parser.parse_args()
     extract_dir = args.zip_file.with_suffix("")
     if not extract_dir.exists():
@@ -30,7 +30,13 @@ def main() -> None:
         raise SystemExit("No .gdb found in the USDA archive")
     gdb = geodatabases[0]
     print(f"Reading {gdb} …")
-    where = f"STATEFIPS = '{args.state_fips}' AND CNTYFIPS = '{args.county_fips}'"
+    if not (args.state_fips.isdigit() and len(args.state_fips) == 2):
+        raise SystemExit("State FIPS must be two digits")
+    if args.county_fips and not (args.county_fips.isdigit() and len(args.county_fips) == 3):
+        raise SystemExit("County FIPS must be three digits")
+    where = f"STATEFIPS = '{args.state_fips}'"
+    if args.county_fips:
+        where += f" AND CNTYFIPS = '{args.county_fips}'"
     columns = ["CSBID", "CSBACRES", "STATEFIPS", "CNTYFIPS", *[f"CDL{year}" for year in range(2018, 2026)]]
     fields = gpd.read_file(gdb, layer="national1825", where=where, columns=columns, engine="pyogrio")
     if fields.empty:
