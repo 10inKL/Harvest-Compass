@@ -33,6 +33,7 @@ The app works in clearly labeled demo mode when Supabase is not configured. Neve
 - `/onboarding` — first-time users name their blank farm workspace before continuing to field setup. New accounts never inherit Prairie Creek demo records.
 - `/demo` — public, read-only preview using explicitly fictional Prairie Creek records.
 - `/dashboard` — live seasonal overview calculated from the selected farm's saved fields, tasks, expenses, equipment, harvest entries, and grain sales.
+- Overview weather uses the free NOAA/NWS API for a seven-day forecast and a recent nearby-station observation when available. It starts from saved weather coordinates or a confirmed field boundary. Farmers can switch fields or save a town-level forecast location using the existing Geoapify search. No additional weather key or database migration is needed. Missing precipitation and temperatures remain unknown rather than becoming zero; times use the forecast location's timezone. Forecast data is cached for ten minutes and the panel checks again every fifteen minutes while the tab is visible.
 - `/farm-map` — satellite/street map with selectable suggested boundaries. Confirmed boundaries are stored as GeoJSON and labeled with their source.
 - `/ai-assistant` — streaming OpenAI copilot with farm context, deterministic tools, saved conversations, and approval-gated proposals.
 - `/operations` and `/action-plan` — edit equipment, fields, and tasks; records update the dashboard and assistant context.
