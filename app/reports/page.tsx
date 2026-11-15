@@ -1,27 +1,14 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import { supabase } from "@/lib/supabase-client";
-import type { ReportAdvice } from "@/lib/season-report-pdf";
-import { ArrowRight, ChartNoAxesCombined, Coins, Printer, Sprout, Wheat } from "lucide-react";
+import { DownloadFarmReport } from "@/components/download-farm-report";
+import { ArrowRight, ChartNoAxesCombined, Coins, Sprout, Wheat } from "lucide-react";
 import { Shell } from "@/components/shell";
 import { FarmRecords } from "@/components/farm-records";
 import { ExpenseChart } from "@/components/expense-chart";
 import { useFarm } from "@/components/farm-provider";
 
 export default function Reports() {
-  const { data, hosted, ready } = useFarm();
-  const [exporting,setExporting] = useState(false);
-  const [exportError,setExportError] = useState("");
-  async function exportReport(){
-    setExporting(true);setExportError("");
-    const snapshot=structuredClone(data);
-    let insights:ReportAdvice={recommendations:[]};
-    try{
-      if(hosted){try{const token=(await supabase?.auth.getSession())?.data.session?.access_token;const response=await fetch("/api/reports/advice",{method:"POST",headers:token?{Authorization:`Bearer ${token}`}:{},cache:"no-store"});const result=await response.json();if(response.ok)insights=result;else insights.unavailable=result.error||"AI assessment is unavailable.";}catch{insights.unavailable="AI assessment could not be loaded. Other sections reflect your saved farm records.";}}
-      const {downloadSeasonReport}=await import("@/lib/season-report-pdf");downloadSeasonReport(snapshot,insights);
-    }catch{setExportError("The PDF could not be generated. Please try again.");}finally{setExporting(false);}
-  }
+  const { data } = useFarm();
   const totalExpenses = data.expenses.reduce((sum, item) => sum + item.amount, 0);
   const totalBushels = data.harvestEntries.reduce((sum, item) => sum + item.bushels, 0);
   const soldBushels = data.grainSales.reduce((sum, sale) => sum + sale.bushels, 0);
@@ -35,9 +22,8 @@ export default function Reports() {
     <div className="season-print-heading"><h1>{data.farmName} · {data.seasonYear} season report</h1><p>{data.farmLocation}</p></div>
     <div className="demo-label">{data.demoSeeded ? "DEMO-SEED WORKSPACE · REPORT INCLUDES FICTIONAL RECORDS" : "SAVED SEASON REPORT"}</div>
     <section className="section-hero"><div className="section-icon"><ChartNoAxesCombined size={30}/></div><div><span className="eyebrow">{data.seasonYear} SEASON</span><h2>See the full story of your season</h2><p>These totals come from your saved fields, expenses, and harvest entries.</p></div></section>
-    <div className="report-actions" style={{display:"flex",flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",gap:16,marginTop:20}}><div><h2 style={{fontSize:22,fontWeight:750,margin:0}}>Expenses & season reports</h2><p style={{margin:"6px 0 0",color:"var(--muted)",fontSize:13}}>Record your farm costs and review your season results.</p></div><button type="button" className="primary-button" style={{minHeight:52,padding:"14px 22px",fontSize:15}} onClick={exportReport} disabled={exporting||!ready}><Printer size={21}/> {exporting?"Preparing report…":"Download farm report (PDF)"}</button></div>
+    <div className="report-actions" style={{display:"flex",flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",gap:16,marginTop:20}}><div><h2 style={{fontSize:22,fontWeight:750,margin:0}}>Expenses & season reports</h2><p style={{margin:"6px 0 0",color:"var(--muted)",fontSize:13}}>Record your farm costs and review your season results.</p></div><DownloadFarmReport/></div>
     <p style={{fontSize:12,color:"var(--muted)"}}>Includes your farm profile, fields, progress, tasks, expenses, harvest, sales, and a fresh management assessment. Downloading requests a short AI review of your current records.</p>
-    {exportError&&<p className="record-error" role="alert">{exportError}</p>}
     <FarmRecords kind="expenses"/>
     <section className="harvest-stats" aria-label="Season totals">
       <div className="kpi"><span className="kpi-icon green"><Wheat size={21}/></span><span className="kpi-label">Recorded production</span><strong>{totalBushels.toLocaleString()} <small>bu</small></strong></div>

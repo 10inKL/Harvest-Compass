@@ -1,5 +1,5 @@
-export type EquipmentTerms = { access: string; provider: string; rate: string; unit: string; quantity: string; inclusions: string };
-export const emptyTerms: EquipmentTerms = { access: "Unknown", provider: "", rate: "", unit: "hour", quantity: "", inclusions: "" };
+export type EquipmentTerms = { access: string; provider: string; rate: string; unit: string; quantity: string; inclusions: string; expenseId: string };
+export const emptyTerms: EquipmentTerms = { access: "Unknown", provider: "", rate: "", unit: "hour", quantity: "", inclusions: "", expenseId: "" };
 const marker = "\n\nEquipment agreement:\n";
 export function equipmentEstimate(terms: EquipmentTerms): number | null {
   if (!terms.rate || !terms.quantity) return null;
@@ -13,7 +13,10 @@ export function readEquipmentTerms(note: string) {
   catch { return { note, terms: { ...emptyTerms } }; }
 }
 export function writeEquipmentTerms(note: string, terms: EquipmentTerms) { return note.trim() + marker + JSON.stringify(terms); }
-export function equipmentDescription(note: string) {
+export function equipmentDescription(note: string, expenses?: { id: string; amount: number; date?: string; incurred_on?: string }[], equipmentId?: string) {
   const parsed = readEquipmentTerms(note), estimate = equipmentEstimate(parsed.terms);
-  return [parsed.note, parsed.terms.access !== "Unknown" ? parsed.terms.access : "", parsed.terms.provider, estimate === null ? "" : `Estimated agreement cost: $${estimate.toLocaleString()} (${parsed.terms.quantity} ${parsed.terms.unit} × $${parsed.terms.rate}); not a logged expense`, parsed.terms.inclusions].filter(Boolean).join(" · ");
+  const linkedId=parsed.terms.expenseId||equipmentId;
+  const actual=expenses?.find(expense=>expense.id===linkedId);
+  const cost=actual?`Recorded expense: $${Number(actual.amount).toLocaleString()} on ${actual.date||actual.incurred_on||"date not entered"}; included once in expense totals`:parsed.terms.expenseId?"Linked expense is unavailable; review the expense ledger":estimate===null?"":`Planning estimate: $${estimate.toLocaleString()} (${parsed.terms.quantity} ${parsed.terms.unit} × $${parsed.terms.rate}); not included in expense totals`;
+  return [parsed.note, parsed.terms.access !== "Unknown" ? parsed.terms.access : "", parsed.terms.provider, cost, parsed.terms.inclusions].filter(Boolean).join(" · ");
 }

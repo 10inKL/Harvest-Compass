@@ -8,9 +8,9 @@ export type FarmContext = {
   source: "saved Supabase records" | "saved records including fictional demo seed" | "fictional demo records";
   farm: { name: string; location: string | null; seasonYear: number; latitude: number | null; longitude: number | null };
   fields: { id: string; name: string; crop: string; acres: number; plantedOn: string | null; status: string; progress: number }[];
-  equipment: { name: string; status: string; note: string }[];
+  equipment: { id?: string; name: string; status: string; note: string }[];
   tasks: { title: string; detail: string; dueOn: string | null; priority: string; done: boolean }[];
-  expenses: { category: string; amount: number; incurredOn: string; note: string }[];
+  expenses: { id?: string; category: string; amount: number; incurredOn: string; note: string }[];
   harvest: { fieldId: string; harvestedOn: string; bushels: number; moisturePercent: number | null; storageBin: string }[];
   sales: { crop: string; storageBin: string; soldOn: string; bushels: number; pricePerBushel: number; buyer: string }[];
 };
@@ -47,9 +47,9 @@ export async function getFarmContext(session: AssistantSession): Promise<FarmCon
   const results = await Promise.all([
     db.from("farms").select("name,location,season_year,latitude,longitude,demo_seeded").eq("id", id).single(),
     db.from("fields").select("id,name,crop,acres,planted_on,status,progress").eq("farm_id", id),
-    db.from("equipment").select("name,status,note").eq("farm_id", id),
+    db.from("equipment").select("id,name,status,note").eq("farm_id", id),
     db.from("farm_tasks").select("title,detail,due_on,priority,done").eq("farm_id", id),
-    db.from("expenses").select("category,amount,incurred_on,note").eq("farm_id", id),
+    db.from("expenses").select("id,category,amount,incurred_on,note").eq("farm_id", id),
     db.from("harvest_entries").select("field_id,harvested_on,bushels,moisture_percent,storage_bin").eq("farm_id", id),
     db.from("grain_sales").select("crop,storage_bin,sold_on,bushels,price_per_bushel,buyer").eq("farm_id", id),
   ]);
@@ -61,7 +61,7 @@ export async function getFarmContext(session: AssistantSession): Promise<FarmCon
     source: f.demo_seeded ? "saved records including fictional demo seed" : "saved Supabase records",
     farm: { name: f.name, location: f.location, seasonYear: f.season_year, latitude: f.latitude === null ? null : Number(f.latitude), longitude: f.longitude === null ? null : Number(f.longitude) },
     fields: ((fields ?? []) as { id: string; name: string; crop: string; acres: number; planted_on: string | null; status: string; progress: number }[]).map(x => ({ id: x.id, name: x.name, crop: x.crop, acres: Number(x.acres), plantedOn: x.planted_on, status: x.status, progress: x.progress })),
-    equipment: ((equipment ?? []) as FarmContext["equipment"]).map(item => ({...item, note: equipmentDescription(item.note)})),
+    equipment: ((equipment ?? []) as FarmContext["equipment"]).map(item => ({...item, note: equipmentDescription(item.note, (expenses ?? []) as {id:string;amount:number;incurred_on:string}[], item.id)})),
     tasks: ((tasks ?? []) as { title: string; detail: string; due_on: string | null; priority: string; done: boolean }[]).map(x => ({ title: x.title, detail: x.detail, dueOn: x.due_on, priority: x.priority, done: x.done })),
     expenses: ((expenses ?? []) as { category: string; amount: number; incurred_on: string; note: string }[]).map(x => ({ category: x.category, amount: Number(x.amount), incurredOn: x.incurred_on, note: x.note })),
     harvest: ((harvest ?? []) as { field_id: string; harvested_on: string; bushels: number; moisture_percent: number | null; storage_bin: string }[]).map(x => ({ fieldId: x.field_id, harvestedOn: x.harvested_on, bushels: Number(x.bushels), moisturePercent: x.moisture_percent === null ? null : Number(x.moisture_percent), storageBin: x.storage_bin })),
