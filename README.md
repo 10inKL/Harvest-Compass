@@ -39,3 +39,7 @@ npm run build
 ## Planned hosted setup
 
 To use hosted storage, apply `supabase/migrations/202611140001_initial.sql` to a Supabase project. Copy `.env.example` to `.env.local` and add the project URL and **publishable** key. Restart the development server, then sign in with an email link. Do not put secret or service-role keys in client environment variables or commit `.env.local`.
+
+## Harvest and inventory
+
+Record harvested bushels by field, date, moisture, and storage bin at `/harvest`. `/inventory` groups those entries by crop and bin. Inventory is calculated from harvest records and does not yet subtract sales, transfers, or shrink. Apply `supabase/migrations/202611150001_harvest_entries.sql` after the initial migration to enable hosted harvest logging.

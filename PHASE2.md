@@ -7,3 +7,5 @@ With `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` confi
 Without those environment variables, the app runs in demo mode and saves records in browser local storage. Never commit `.env.local` or use a service-role key in the browser.
 
 The AI assistant and real decision approvals are still future work. Farm location and season are demo constants for this MVP.
+
+The next migration, `supabase/migrations/202611150001_harvest_entries.sql`, adds field-linked harvest entries. The Harvest Log and Grain Inventory pages calculate stock from those entries; no separate balance is stored. Sales, transfers, and shrink are intentionally outside this increment.
