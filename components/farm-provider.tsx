@@ -24,8 +24,9 @@ async function loadFarm(user: User): Promise<{ state: FarmState; farmId: string 
   if (membership.error) throw membership.error;
   let farmId=membership.data?.farm_id as string | undefined;
   if (!farmId) {
-    const created=await supabase.from("farms").insert({name:initialFarmState.farmName,location:"Brookings County, South Dakota",season_year:2026}).select("id").single();
-    if (created.error) throw created.error; farmId=created.data.id;
+    farmId=newId();
+    const created=await supabase.from("farms").insert({id:farmId,name:initialFarmState.farmName,location:"Brookings County, South Dakota",season_year:2026});
+    if (created.error) throw created.error;
     const seed:FarmState={...initialFarmState,fields:initialFarmState.fields.map(f=>({...f,id:newId()})),tasks:initialFarmState.tasks.map(t=>({...t,id:newId()})),expenses:initialFarmState.expenses.map(e=>({...e,id:newId()})),equipment:initialFarmState.equipment.map(e=>({...e,id:newId()}))};
     for (const kind of Object.keys(tables) as (keyof typeof tables)[]) { const rows=seed[kind].map(item=>toRow(kind,item,farmId!)); const result=await supabase.from(tables[kind]).insert(rows); if(result.error) throw result.error; }
   }
@@ -45,7 +46,7 @@ export function FarmProvider({children}:{children:React.ReactNode}) {
   useEffect(()=>{
     if(!supabase){try{const saved=localStorage.getItem(STORAGE_KEY);if(saved)queueMicrotask(()=>setData(JSON.parse(saved) as FarmState));}catch{}queueMicrotask(()=>setReady(true));return;}
     let active=true;
-    async function refresh(nextUser:User|null){if(!active)return;if(!nextUser){farmId.current=null;loadedUser.current=null;loadingUser.current=null;setUser(null);setReady(true);return;}if(loadingUser.current===nextUser.id||loadedUser.current===nextUser.id)return;loadingUser.current=nextUser.id;farmId.current=null;setUser(nextUser);setReady(false);try{const loaded=await loadFarm(nextUser);if(!active)return;farmId.current=loaded.farmId;loadedUser.current=nextUser.id;previous.current=loaded.state;setData(loaded.state);setError("");}catch(e){setError(e instanceof Error?e.message:"Unable to load farm");}finally{loadingUser.current=null;if(active)setReady(true);}}
+    async function refresh(nextUser:User|null){if(!active)return;if(!nextUser){farmId.current=null;loadedUser.current=null;loadingUser.current=null;setUser(null);setReady(true);return;}if(loadingUser.current===nextUser.id||loadedUser.current===nextUser.id)return;loadingUser.current=nextUser.id;farmId.current=null;setUser(nextUser);setReady(false);try{const loaded=await loadFarm(nextUser);if(!active)return;farmId.current=loaded.farmId;loadedUser.current=nextUser.id;previous.current=loaded.state;setData(loaded.state);setError("");}catch(e){setError(e && typeof e === "object" && "message" in e ? String(e.message) : "Unable to load farm");}finally{loadingUser.current=null;if(active)setReady(true);}}
     const {data:listener}=supabase.auth.onAuthStateChange((_event,session)=>{queueMicrotask(()=>refresh(session?.user??null));});return()=>{active=false;listener.subscription.unsubscribe();};
   },[]);
   useEffect(()=>{if(!ready)return;if(!supabase){localStorage.setItem(STORAGE_KEY,JSON.stringify(data));return;}if(!user||!farmId.current)return;const before=previous.current;previous.current=data;const id=farmId.current;for(const kind of Object.keys(tables) as (keyof typeof tables)[]){const oldItems=before[kind];const newItems=data[kind];for(const item of newItems){const old=oldItems.find(x=>x.id===item.id);if(!old||JSON.stringify(old)!==JSON.stringify(item))supabase.from(tables[kind] as string).upsert(toRow(kind,item,id) as Record<string, unknown>).then(({error})=>{if(error)setError(error.message);});}for(const old of oldItems){if(!newItems.some(x=>x.id===old.id))supabase.from(tables[kind]).delete().eq("id",old.id).eq("farm_id",id).then(({error})=>{if(error)setError(error.message);});}}
