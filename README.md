@@ -6,7 +6,7 @@
 
 - Responsive dashboard with acreage, field status, tasks, expenses, crop progress, and recent activity.
 - Pages for Farm Map, Farm Operations, Action Plan, AI Assistant, and Reports & History.
-- Add and delete fields, tasks, expenses, and equipment. Complete or reopen tasks and update equipment status.
+- Add, edit, and delete fields, tasks, expenses, and equipment. Complete or reopen tasks and update equipment status. Hosted changes are confirmed by Supabase before the UI updates.
 - Dashboard totals and expense chart update from edited records.
 - With Supabase configured, records persist in the hosted database for signed-in users. Without it, records persist in the current browser through local storage. The initial South Dakota farm records are **fictional demo data**.
 
