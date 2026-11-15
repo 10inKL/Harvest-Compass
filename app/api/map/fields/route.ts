@@ -5,7 +5,9 @@ import { inflateSync } from "node:zlib";
 import { DatabaseSync } from "node:sqlite";
 
 function localFeatures(bounds: number[]) {
-  const path = join(process.cwd(), "data", "csb", "south-dakota-csb.sqlite");
+  const selectedPath = join(process.cwd(), "data", "csb", "south-dakota-selected-counties.sqlite");
+  const originalPath = join(process.cwd(), "data", "csb", "south-dakota-csb.sqlite");
+  const path = existsSync(selectedPath) ? selectedPath : originalPath;
   if (!existsSync(path)) return null;
   const db = new DatabaseSync(path, { readOnly: true });
   try {
