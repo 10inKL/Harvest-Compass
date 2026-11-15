@@ -1,11 +1,11 @@
-# Phase 2 status
+# Implementation status
 
-The app supports adding, editing, and deleting fields, tasks, expenses, and equipment. Hosted writes are confirmed by Supabase before the UI updates, and failures leave the form open with an error. Dashboard acreage, field count, open tasks, estimated expenses, and the expense chart derive from these records.
+Updated November 15, 2026. These notes replace the original Phase 2 snapshot. See [README.md](README.md) for current setup, architecture and limitations.
 
-With `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configured in `.env.local`, the app uses Supabase email sign-in and stores records in the hosted database. Each new account gets a clearly labeled fictional Prairie Creek Farm demo dataset. The SQL schema and row-level security policies live in `supabase/migrations/202611140001_initial.sql`.
+The MVP now includes Supabase email/password accounts, separate private farm workspaces, saved fields/tasks/equipment/expenses, USDA estimated field selection, NOAA weather, USDA regional cash bids, Groq voice input, streaming OpenAI chat, approval-gated task proposals, harvest and grain sales, and PDF reports. New accounts start empty; the fictional public demo remains separate.
 
-Without those environment variables, the app runs in demo mode and saves records in browser local storage. Never commit `.env.local` or use a service-role key in the browser.
+Hosted writes are confirmed by Supabase before records reload. RLS and authenticated routes govern access; dedicated multi-user isolation testing is still needed before production. Apply all seven migrations listed in the README to a fresh database. Migrations do not import USDA polygons; follow [field-data setup](docs/FIELD_DATA.md). Do not blindly rerun initial table creation on an existing project.
 
-The AI assistant and real decision approvals are still future work. Farm location and season are demo constants for this MVP.
+Without Supabase, local demo records can persist in browser storage. Private chat and real approvals require hosted accounts. Farm location and season are editable. Keys stay in server configuration; GitHub does not back up keys or database contents.
 
-The next migration, `supabase/migrations/202611150001_harvest_entries.sql`, adds field-linked harvest entries. The Harvest Log and Grain Inventory pages calculate stock from those entries; no separate balance is stored. Sales, transfers, and shrink are intentionally outside this increment.
+Still outside the MVP: profile photos, supplies inventory, labor/service bookings, approved budgets, grain transfers/shrink, live business search and a market-price tool inside chat. Production work includes shared rate limits, backups, monitoring and expanded end-to-end/security testing.
