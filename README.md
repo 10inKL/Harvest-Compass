@@ -6,3 +6,31 @@ One farm record, from the first seed order to the last bushel sold.
 Harvest Compass helps a farmer secure what they need before the season, coordinate harvest with the equipment and grain-handling capacity they actually have, and understand what is left after the grain is sold.
 
 Built for Wildfire Labs Ignite Hackathon, November 15 by 10inKL: Bhupendra Bohara, Krish Kushwaha, Anurag Thapa Magar, Nimesh Shrestha.
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+Create `.env.local` in the project root for live integrations. Keep secrets server-side:
+
+```env
+OPENAI_API_KEY=your-key
+OPENAI_MODEL=gpt-5-mini
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+The app works in clearly labeled demo mode when Supabase is not configured. Never commit `.env.local` or expose the OpenAI key with a `NEXT_PUBLIC_` prefix.
+
+## Current vertical slices
+
+- `/dashboard` — seasonal overview with expenses, tasks, fields, and AI insight preview.
+- `/farm-map` — satellite/street map with selectable suggested boundaries. Confirmed boundaries are stored as GeoJSON and labeled with their source.
+- `/ai-assistant` — streaming OpenAI copilot with farm context, deterministic tools, saved conversations, and approval-gated proposals.
+- `/harvest` and `/inventory` — persistent harvest and grain inventory records when the Supabase harvest migration is enabled.
+- `/settings/ai` — server-side API configuration status and test connection controls.
+
+Run `npm run lint` and `npm run build` before a demo. If the hosted database predates the map feature, run `supabase/migrations/202611150003_field_boundaries.sql` once in the Supabase SQL Editor.
