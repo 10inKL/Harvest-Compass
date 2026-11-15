@@ -8,7 +8,7 @@ create table if not exists public.csb_boundaries (
   source_release text not null default 'USDA NASS CSB 2018-2025',
   state_fips text not null,
   county_fips text not null,
-  acres numeric(12,2),
+  acres double precision,
   crop_2018 integer, crop_2019 integer, crop_2020 integer, crop_2021 integer,
   crop_2022 integer, crop_2023 integer, crop_2024 integer, crop_2025 integer,
   geom extensions.geometry(MultiPolygon, 4326) not null,

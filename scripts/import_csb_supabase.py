@@ -3,7 +3,9 @@
 
 Usage (keep the database URL out of git):
   pip install psycopg[binary]
-  SUPABASE_DB_URL='postgresql://...' python scripts/import_csb_supabase.py data/csb/brookings-csb.geojson
+  Set SUPABASE_DB_URL in .env.local, then run this script without arguments to
+  import the measured nine-county subset. The SQL Editor CSV workflow is an
+  alternative when a database connection string is unavailable.
 """
 from __future__ import annotations
 
@@ -42,6 +44,7 @@ def main() -> None:
                 raise SystemExit("Import stopped: estimated storage would leave less than 150 MiB for farmer records within the Free allowance")
             migration = Path("supabase/migrations/202611150004_csb_boundaries.sql").read_text()
             cursor.execute(migration)
+            cursor.execute(Path("supabase/migrations/202611150005_csb_geometry_acres.sql").read_text())
             connection.commit()
             batch = []
             for feature in ijson.items(data, "features.item", use_float=True):

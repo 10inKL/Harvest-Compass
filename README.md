@@ -38,17 +38,17 @@ Run `npm run lint` and `npm run build` before a demo. If the hosted database pre
 
 ### USDA field-boundary pilot
 
-The USDA NASS 2018–2025 archive is intentionally not committed to GitHub. It is downloaded locally and filtered to Brookings County before import:
+The official USDA NASS 2018–2025 archive is intentionally not committed to GitHub. The original extraction produces the South Dakota source; the hosted pilot uses the nine counties listed below.
 
 ```bash
 python3 -m venv /tmp/harvestcompass-csb-env
 /tmp/harvestcompass-csb-env/bin/pip install geopandas pyogrio
 /tmp/harvestcompass-csb-env/bin/python scripts/extract_csb_county.py \
   data/csb/NationalCSB_2018-2025_rev23.zip \
-  data/csb/brookings-csb.geojson
+  data/csb/south-dakota-csb.geojson --state-fips 46
 ```
 
-Run `supabase/migrations/202611150004_csb_boundaries.sql`, then bulk-load the extracted GeoJSON. The extractor accepts `--state-fips 46` for all South Dakota, or add `--county-fips 011` for the smaller Brookings pilot. The full South Dakota extract contains 725,473 polygons and is about 1.2 GB as GeoJSON, so check the hosted database storage allowance before importing it. The app endpoint `/api/map/fields` returns a bounded visible-area subset as GeoJSON. USDA CSB polygons are estimates of crop fields—not legal, ownership, or FSA boundaries—and the UI labels them accordingly.
+The extractor accepts `--state-fips 46` for all South Dakota, or `--county-fips 011` for Brookings alone. The full South Dakota extract contains 725,473 polygons and is about 1.2 GB as GeoJSON; it has **not** been imported into Supabase. USDA CSB polygons are estimated agricultural fields, not legal, ownership, or FSA boundaries. The map labels them as estimates and requires the farmer to confirm the current crop.
 
 Location autocomplete uses Geoapify's free tier with `GEOAPIFY_API_KEY` kept on the server. It accepts US cities, addresses and ZIP codes; coordinates work without a key. Saved field names are suggested from the current farm. No location searches are restricted to South Dakota, but estimated boundaries are shown only where USDA data has actually been imported. The public Nominatim endpoint is not used for autocomplete because its usage policy forbids it.
 
@@ -62,7 +62,7 @@ For the local hackathon demo, build a spatially indexed SQLite file from the Sou
   data/csb/south-dakota-csb.geojson data/csb/south-dakota-csb.sqlite
 ```
 
-The Next.js map API uses this local index when present, returning at most 500 features per visible map request. The indexed file is about 420 MB and is excluded from Git. On a hosted deployment without this file, apply the PostGIS migration and import the state data in batches within the database's storage allowance. The USDA source archive, extracted GeoJSON and local index are not shipped with the repository.
+The original 420 MB statewide SQLite index remains local and excluded from Git. The map API queries hosted PostGIS first, falls back to the local index if needed, and splits crowded visible areas into smaller bounding boxes. If a view is still capped, the map asks the farmer to zoom in. The USDA source archive, extracted GeoJSON and local indexes are not shipped with the repository.
 
 For the hosted Free-tier pilot, extract the nine selected counties without sampling:
 
@@ -73,4 +73,6 @@ For the hosted Free-tier pilot, extract the nine selected counties without sampl
   data/csb/south-dakota-selected-counties.geojson data/csb/south-dakota-selected-counties.sqlite
 ```
 
-The subset contains 79,829 USDA polygons (114.6 MiB GeoJSON, 47 MB indexed SQLite). Estimated PostgreSQL table and indexes are 59–106 MiB. Add `SUPABASE_DB_URL` to `.env.local` only for the server-side import, then run `scripts/import_csb_supabase.py`. It checks actual database size, applies the PostGIS migration, imports in 500-record batches, and stops before leaving less than 150 MiB for farm records within the 500 MiB Free allowance. The local map prefers the nine-county index; the original 420 MB statewide index remains untouched as source/fallback.
+The nine counties are Brookings, Lake, Moody, Minnehaha, Lincoln, McCook, Miner, Deuel, and Kingsbury. The subset contains **79,829 complete USDA polygons** (114.6 MiB GeoJSON, 47 MB selected-county SQLite). All 79,829 were imported into the existing Supabase PostGIS database through the Table Editor using county CSVs; exact SQL counts matched each county. The database measured **79 MB total**, including **59 MB** for the boundary table and indexes, leaving about **421 MB** under the Free plan's 500 MB database allowance. Pennington County was not imported.
+
+For a fresh database, apply migrations `202611150003` through `202611150005`, then load the county subset. `scripts/export_csb_csv.py` produces one upload file per county for the Supabase Table Editor (requires `ijson` and `shapely`); alternatively `scripts/import_csb_supabase.py` streams batches over a server-side `SUPABASE_DB_URL`. Never commit that connection string. The hosted project already has the three migrations and all nine counties applied.

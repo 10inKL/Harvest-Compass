@@ -18,7 +18,10 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect, drawing, onDra
     if (!layers.current) return;
     layers.current.clearLayers();
     for (const candidate of candidates) {
-      const polygon = L.polygon(candidate.coordinates.map(([lat, lng]) => [lat, lng] as [number, number]), { color: selectedId === candidate.id ? "#f7d37b" : "#ffffff", weight: selectedId === candidate.id ? 4 : 2, fillColor: candidate.crop === "Corn" ? "#d8b85b" : "#78a87b", fillOpacity: selectedId === candidate.id ? .58 : .32 });
+      const style = { color: selectedId === candidate.id ? "#f7d37b" : "#ffffff", weight: selectedId === candidate.id ? 4 : 2, fillColor: candidate.crop === "Corn" ? "#d8b85b" : candidate.crop === "Soybeans" ? "#78a87b" : "#e4e8d8", fillOpacity: selectedId === candidate.id ? .58 : .32 };
+      const polygon = candidate.geometry
+        ? L.geoJSON(candidate.geometry, { style })
+        : L.polygon(candidate.coordinates.map(([lat, lng]) => [lat, lng] as [number, number]), style);
       polygon.bindTooltip(`${candidate.name} · ${candidate.acres} ac`, { sticky: true });
       polygon.on("click", () => onSelect(candidate));
       polygon.addTo(layers.current);
@@ -28,7 +31,7 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect, drawing, onDra
     let active = true;
     void import("leaflet").then(L => {
       if (!active || !node.current || map.current) return;
-      const instance = L.map(node.current).setView([44.28, -96.78], 13);
+      const instance = L.map(node.current).setView([44.28, -96.78], 14);
       const imagery = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { attribution: "Imagery © Esri" });
       const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors" });
       imagery.addTo(instance);
@@ -53,7 +56,7 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect, drawing, onDra
     if (!drawing) { drawPoints.current = []; drawLayer.current?.remove(); drawLayer.current = null; }
   }, [drawing]);
   useEffect(() => { if (map.current) void import("leaflet").then(L => renderPolygons(L)); }, [renderPolygons]);
-  useEffect(() => { if (center && map.current) map.current.setView(center, 13); }, [center]);
+  useEffect(() => { if (center && map.current) map.current.setView(center, 14); }, [center]);
   function finishDrawing() {
     if (drawPoints.current.length < 3) return;
     const points = [...drawPoints.current, drawPoints.current[0]];
