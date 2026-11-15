@@ -46,6 +46,16 @@ The app works in clearly labeled demo mode when Supabase is not configured. Neve
 
 Run `npm run lint` and `npm run build` before a demo. Hosted databases need migrations through `supabase/migrations/202611150006_grain_sales.sql`; the current hosted project has the grain-sales migration applied.
 
+### Grain selling prices
+
+The overview shows USDA AMS **South Dakota Daily Grain Bids (report 3186)** beside the weather on wide screens and below it on smaller screens. Corn and soybean prices are regional current-delivery cash bids in USD per bushel, not futures, individual buyer quotes, actual sales or guaranteed proceeds. Choose a South Dakota region explicitly; the card does not infer an elevator or farm market from its coordinates. Every result shows its report date and retrieval time; older reports are labeled and missing prices remain unavailable.
+
+Create a free account at https://mymarketnews.ams.usda.gov/ and find your key in your profile. Add `USDA_MARKET_NEWS_API_KEY=your_key_here` manually to the project’s ignored `.env.local`, then restart `npm run dev`. Never share or commit the key. Production uses the same server-side environment variable. No payment or database migration is required. Without a key, farmers see a connection-pending message and a link to the official report.
+
+The authenticated `/api/market-prices` server route fetches public publication metadata first, then requests only that report date using USDA Basic authentication. Credentials never reach the browser. Normalized prices are cached in memory for one hour, concurrent requests are coalesced, and errors have a one-minute backoff. Units, price ranges, dates, current delivery and ambiguous price series are validated; unsupported results are not displayed. The cache is per server instance. No raw provider errors or credentials are logged or returned.
+
+Checks: `node --experimental-strip-types --test tests/grain-market.test.mjs`. Provider responses are mocked. A live authenticated USDA response has not been tested during development; enable the connection and verify the displayed values against the linked official report before the demo. USDA docs: https://mymarketnews.ams.usda.gov/mymarketnews-api/authentication and https://mymarketnews.ams.usda.gov/mymarketnews-api/filtering.
+
 ### Voice questions
 
 The assistant microphone uses Groq's speech-to-text API, then inserts editable text into the existing OpenAI chat composer. Set `GROQ_API_KEY` in `.env.local` and restart the development server. Keep the Groq account on its Free plan; account-wide quotas still apply. No new package, paid subscription, or database migration is required. Neither the OpenAI credential nor farm records/chat history are sent to Groq.
