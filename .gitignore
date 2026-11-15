@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# USDA CSB archives and extracted GIS data (download locally; never commit)
+/data/csb/
+
 # vercel
 .vercel
 
