@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import { Check, Info, MapPinned, MousePointer2, Satellite, Save, Wheat } from "lucide-react";
+import { Check, Eraser, Info, MapPinned, MousePointer2, Pencil, Satellite, Save, Wheat } from "lucide-react";
 import { Shell } from "@/components/shell";
 import { useFarm } from "@/components/farm-provider";
 import { newId } from "@/lib/farm-store";
@@ -14,8 +14,12 @@ export default function FarmMap() {
   const { data, saveRecord, busy } = useFarm();
   const [selected, setSelected] = useState<CandidateField | null>(null);
   const [fieldName, setFieldName] = useState(""); const [crop, setCrop] = useState<CandidateField["crop"]>("Corn"); const [saved, setSaved] = useState(false);
+  const [drawing, setDrawing] = useState(false);
   const savedBoundaries = useMemo(() => data.fields.filter((field) => field.boundaryConfirmed), [data.fields]);
   function selectCandidate(c: CandidateField) { setSelected(c); setFieldName(c.name.replace(" candidate", "")); setCrop(c.crop); setSaved(false); }
+  function startDrawing() { setSelected(null); setSaved(false); setDrawing(true); setFieldName("New field"); }
+  function finishDrawing() { window.dispatchEvent(new Event("harvestcompass:finish-drawing")); }
+  function acceptDrawnBoundary(coordinates: [number, number][]) { setDrawing(false); setSelected({ id: "manual-boundary", name: "New field", crop, acres: Math.max(1, Math.round(coordinates.length * 12)), source: "Farmer-drawn boundary", coordinates }); }
   async function confirmBoundary() {
     if (!selected || !fieldName.trim()) return;
     const existing = data.fields.find((field) => field.name.toLowerCase() === fieldName.trim().toLowerCase());
@@ -24,7 +28,7 @@ export default function FarmMap() {
   }
   return <Shell>
     <div className="map-hero"><div><div className="map-kicker"><MapPinned size={14}/> Boundary workspace · Demo data</div><h1>Turn the landscape into a field plan.</h1><p>Select a suggested agricultural boundary from the satellite view, confirm its crop and name, and save it to your farm records.</p></div><div className="map-hero-badge"><Satellite size={17}/><span>Satellite + street layers</span></div></div>
-    <div className="map-layout"><section className="map-panel"><div className="map-toolbar"><span><MousePointer2 size={15}/> Select a highlighted polygon</span><span>{candidateFields.length} suggested areas</span></div><FarmMapCanvas candidates={candidateFields} selectedId={selected?.id ?? null} onSelect={selectCandidate}/></section>
+    <div className="map-layout"><section className="map-panel"><div className="map-toolbar"><span>{drawing ? <><Pencil size={15}/> Click corners around your field</> : <><MousePointer2 size={15}/> Select a suggested polygon or draw your own</>}</span><span className="map-toolbar-actions"><button className="map-tool-button" onClick={drawing ? finishDrawing : startDrawing}>{drawing ? <><Check size={14}/> Finish boundary</> : <><Pencil size={14}/> Draw my boundary</>}</button>{drawing && <button className="map-tool-button secondary" onClick={() => setDrawing(false)}><Eraser size={14}/> Cancel</button>}</span></div><FarmMapCanvas candidates={candidateFields} selectedId={selected?.id ?? null} onSelect={selectCandidate} drawing={drawing} onDrawComplete={acceptDrawnBoundary}/></section>
       <aside className="map-side"><div className="map-side-card"><div className="map-side-heading"><Info size={16}/><span>How this works</span></div><ol><li>Click a highlighted area on the map.</li><li>Review the crop and acreage estimate.</li><li>Confirm the field name to save it.</li></ol><p className="map-disclaimer">These are demo suggested boundaries for the Brookings County view, not legal ownership or survey lines. Confirm before using them for operations.</p></div>
         {selected ? <div className="map-select-card"><div className="map-side-heading"><Check size={16}/><span>Confirm selected area</span></div><div className="map-selection-name">{selected.name}</div><label>Field name<input value={fieldName} onChange={(e) => setFieldName(e.target.value)} /></label><label>Crop<select value={crop} onChange={(e) => setCrop(e.target.value as CandidateField["crop"])}><option value="Corn">Corn</option><option value="Soybeans">Soybeans</option></select></label><div className="map-acreage"><Wheat size={15}/><span>{selected.acres} estimated acres</span></div><button className="primary-button" onClick={confirmBoundary} disabled={busy || !fieldName.trim()}><Save size={15}/>{busy ? "Saving…" : "Confirm and save field"}</button>{saved && <p className="map-saved-message">Saved to your farm records. This boundary now flows into operations and AI context.</p>}</div> : <div className="map-side-card map-empty-side"><MousePointer2 size={20}/><strong>Choose a boundary</strong><p>Click any outlined field to begin.</p></div>}
       </aside></div>

@@ -1,13 +1,15 @@
 "use client";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useRef } from "react";
-import type { Map as LeafletMap, LayerGroup } from "leaflet";
+import type { Map as LeafletMap, LayerGroup, Polygon } from "leaflet";
 import type { CandidateField } from "@/lib/map-data";
 
-export function FarmMapCanvas({ candidates, selectedId, onSelect }: { candidates: CandidateField[]; selectedId: string | null; onSelect: (candidate: CandidateField) => void }) {
+export function FarmMapCanvas({ candidates, selectedId, onSelect, drawing, onDrawComplete }: { candidates: CandidateField[]; selectedId: string | null; onSelect: (candidate: CandidateField) => void; drawing: boolean; onDrawComplete: (coordinates: [number, number][]) => void }) {
   const node = useRef<HTMLDivElement>(null);
   const map = useRef<LeafletMap | null>(null);
   const layers = useRef<LayerGroup | null>(null);
+  const drawPoints = useRef<[number, number][]>([]);
+  const drawLayer = useRef<Polygon | null>(null);
   const renderPolygons = useCallback((L: typeof import("leaflet")) => {
     if (!layers.current) return;
     layers.current.clearLayers();
@@ -30,10 +32,26 @@ export function FarmMapCanvas({ candidates, selectedId, onSelect }: { candidates
       map.current = instance;
       layers.current = L.layerGroup().addTo(instance);
       renderPolygons(L);
+      instance.on("click", (event) => {
+        if (!drawing) return;
+        drawPoints.current = [...drawPoints.current, [event.latlng.lat, event.latlng.lng]];
+        drawLayer.current?.remove();
+        drawLayer.current = L.polygon(drawPoints.current, { color: "#f7d37b", weight: 3, fillColor: "#f7d37b", fillOpacity: .28 }).addTo(instance);
+      });
       setTimeout(() => instance.invalidateSize(), 100);
     });
     return () => { active = false; map.current?.remove(); map.current = null; layers.current = null; };
   }, []);
+  useEffect(() => {
+    if (!drawing) { drawPoints.current = []; drawLayer.current?.remove(); drawLayer.current = null; }
+  }, [drawing]);
   useEffect(() => { if (map.current) void import("leaflet").then(L => renderPolygons(L)); }, [renderPolygons]);
+  function finishDrawing() {
+    if (drawPoints.current.length < 3) return;
+    const points = [...drawPoints.current, drawPoints.current[0]];
+    onDrawComplete(points);
+  }
+  // Expose a small imperative finish hook through the map container custom event.
+  useEffect(() => { const handler = () => finishDrawing(); window.addEventListener("harvestcompass:finish-drawing", handler); return () => window.removeEventListener("harvestcompass:finish-drawing", handler); });
   return <div ref={node} className="farm-map-canvas" aria-label="Interactive suggested field boundary map"/>;
 }
