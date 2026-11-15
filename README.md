@@ -28,6 +28,10 @@ The app works in clearly labeled demo mode when Supabase is not configured. Neve
 
 ## Working MVP
 
+- `/` — public HarvestCompass welcome page with signup, sign-in, and a clearly separated Prairie Creek product demo.
+- `/signup`, `/login`, `/forgot-password`, and `/reset-password` — Supabase email/password authentication with confirmation and recovery flows. Passwords are handled only by Supabase Auth.
+- `/onboarding` — first-time users name their blank farm workspace before continuing to field setup. New accounts never inherit Prairie Creek demo records.
+- `/demo` — public, read-only preview using explicitly fictional Prairie Creek records.
 - `/dashboard` — live seasonal overview calculated from the selected farm's saved fields, tasks, expenses, equipment, harvest entries, and grain sales.
 - `/farm-map` — satellite/street map with selectable suggested boundaries. Confirmed boundaries are stored as GeoJSON and labeled with their source.
 - `/ai-assistant` — streaming OpenAI copilot with farm context, deterministic tools, saved conversations, and approval-gated proposals.
@@ -38,6 +42,14 @@ The app works in clearly labeled demo mode when Supabase is not configured. Neve
 - `/settings/ai` — server-side API configuration status and test connection controls.
 
 Run `npm run lint` and `npm run build` before a demo. Hosted databases need migrations through `supabase/migrations/202611150006_grain_sales.sql`; the current hosted project has the grain-sales migration applied.
+
+### Authentication and location services
+
+Supabase Auth is the only authentication provider. It already supplies secure password storage, email confirmation, password recovery, persisted browser sessions, and user identity for the existing row-level security policies, so this phase does not require another auth API or a new profile table. The farmer's display name and onboarding state are stored in Supabase Auth metadata; farms and memberships remain in the existing `farms` and `farm_members` tables.
+
+Geoapify remains the location-autocomplete provider because the application already uses it and its Free plan currently includes 3,000 credits per day. The US Census Geocoder is a useful free fallback for submitted US street addresses and coordinate lookups, but it is not a type-ahead place autocomplete service. The public OpenStreetMap Nominatim endpoint is intentionally not used for autocomplete because its usage policy prohibits that use.
+
+For Supabase email confirmation and recovery links, add your local and deployed app origins to **Authentication → URL Configuration** in the Supabase dashboard. At minimum, local development should allow `http://localhost:3000/**`.
 
 ### USDA field-boundary pilot
 

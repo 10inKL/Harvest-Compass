@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { usePathname, useRouter } from "next/navigation";
 import { initialFarmState, newId, type FarmState } from "@/lib/farm-store";
 import { supabase } from "@/lib/supabase-client";
 const STORAGE_KEY = "harvestcompass-farm-v1";
@@ -56,6 +57,8 @@ async function loadFarm(user: User): Promise<{ state: FarmState; farmId: string;
   return {farmId,workspaces,harvestAvailable:!harvestEntries.error,salesAvailable:!grainSales.error,state:{farmName:farm.data!.name,farmLocation:farm.data!.location??"Not set",seasonYear:farm.data!.season_year,demoSeeded:Boolean(farm.data!.demo_seeded),fields:(fields.data??[]).map(f=>({id:f.id,name:f.name,crop:f.crop,acres:Number(f.acres),planted:f.planted_on??"Not set",status:f.status,progress:f.progress,boundaryGeoJson:f.boundary_geojson??undefined,boundarySource:f.boundary_source??undefined,boundaryConfirmed:Boolean(f.boundary_confirmed)})),tasks:(tasks.data??[]).map(t=>({id:t.id,title:t.title,detail:t.detail,due:t.due_on??"Not set",priority:t.priority,done:t.done})),expenses:(expenses.data??[]).map(e=>({id:e.id,category:e.category,amount:Number(e.amount),date:e.incurred_on,note:e.note})),equipment:(equipment.data??[]).map(e=>({id:e.id,name:e.name,status:e.status,note:e.note})),harvestEntries:(harvestEntries.data??[]).map(e=>({id:e.id,fieldId:e.field_id,harvestedOn:e.harvested_on,bushels:Number(e.bushels),moisturePercent:e.moisture_percent===null?null:Number(e.moisture_percent),storageBin:e.storage_bin,notes:e.notes})),grainSales:(grainSales.data??[]).map(s=>({id:s.id,crop:s.crop,storageBin:s.storage_bin,soldOn:s.sold_on,bushels:Number(s.bushels),pricePerBushel:Number(s.price_per_bushel),buyer:s.buyer,notes:s.notes}))}};
 }
 export function FarmProvider({children}:{children:React.ReactNode}) {
+  const pathname=usePathname();
+  const publicRoute=pathname==="/"||pathname==="/login"||pathname==="/signup"||pathname==="/forgot-password"||pathname==="/reset-password"||pathname==="/demo";
   const [data,setData]=useState<FarmState>(initialFarmState);
   const [activeFarmId,setActiveFarmId]=useState<string|null>(null);
   const [workspaces,setWorkspaces]=useState<Workspace[]>([]);
@@ -66,8 +69,6 @@ export function FarmProvider({children}:{children:React.ReactNode}) {
   const [salesAvailable,setSalesAvailable]=useState(!supabase);
   const [error,setError]=useState("");
   const [loadFailed,setLoadFailed]=useState(false);
-  const [email,setEmail]=useState("");
-  const [sent,setSent]=useState(false);
   const farmId=useRef<string|null>(null);
   const loadingUser=useRef<string|null>(null);
   const loadedUser=useRef<string|null>(null);
@@ -145,12 +146,13 @@ export function FarmProvider({children}:{children:React.ReactNode}) {
       return true;
     }catch(e){setError(messageOf(e));return false;}finally{setBusy(false);}
   }
-  async function signIn(event:React.FormEvent){event.preventDefault();if(!supabase)return;setError("");const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin}});if(error)setError(error.message);else setSent(true);}
   async function signOut(){await supabase?.auth.signOut();farmId.current=null;setActiveFarmId(null);setWorkspaces([]);loadedUser.current=null;setUser(null);}
-  if(supabase&&!ready)return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">🌾 HarvestCompass</div><p>Loading your farm workspace…</p></div></div>;
-  if(supabase&&user&&loadFailed)return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">🌾 HarvestCompass</div><h1>Could not load your farm</h1><p className="auth-error">{error||"Please try again."}</p><button className="primary-button" onClick={()=>window.location.reload()}>Retry</button></div></div>;
-  if(supabase&&!user)return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">🌾 HarvestCompass</div><h1>Welcome to your farm workspace</h1><p>Sign in with an email link to keep your farm records in Supabase.</p>{sent?<p className="auth-notice">Check your email for a sign-in link.</p>:<form onSubmit={signIn}><label>Email address<input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label><button className="primary-button">Send sign-in link</button></form>}{error&&<p className="auth-error">{error}</p>}</div></div>;
+  if(supabase&&!ready&&!publicRoute)return <LoadingWorkspace/>;
+  if(supabase&&user&&loadFailed&&!publicRoute)return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">🌾 HarvestCompass</div><h1>Could not load your farm</h1><p className="auth-error">{error||"Please try again."}</p><button className="primary-button" onClick={()=>window.location.reload()}>Retry</button></div></div>;
+  if(supabase&&ready&&!user&&!publicRoute)return <AuthRedirect pathname={pathname}/>;
   return <Context.Provider value={{data,farmId:activeFarmId,workspaces,ready,hosted:!!supabase,harvestAvailable,salesAvailable,user,busy,error,saveRecord,deleteRecord,saveFarmProfile,createFarm,switchFarm:selectFarm,refreshFarm:reload,signOut}}>{error&&<div className="sync-error" role="alert">Save error: {error}</div>}{children}</Context.Provider>;
 }
+function LoadingWorkspace(){return <div className="auth-screen"><div className="auth-card"><div className="auth-logo">🌾 HarvestCompass</div><p>Loading your farm workspace…</p></div></div>;}
+function AuthRedirect({pathname}:{pathname:string}){const router=useRouter();useEffect(()=>{router.replace(`/login?next=${encodeURIComponent(pathname)}`);},[pathname,router]);return <LoadingWorkspace/>;}
 function messageOf(error:unknown){return error&&typeof error==="object"&&"message" in error?String(error.message):"Something went wrong. Please try again.";}
 export function useFarm(){const value=useContext(Context);if(!value)throw new Error("FarmProvider is missing");return value;}
